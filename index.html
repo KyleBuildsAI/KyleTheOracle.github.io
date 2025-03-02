@@ -1,649 +1,781 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kyle Coleman - Portfolio</title>
   <style>
-    body {
+    * {
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
+    }
+    body {
       overflow: hidden;
       font-family: Arial, sans-serif;
     }
-    canvas {
+    #canvas {
       display: block;
       background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-    }
-    #resultPage {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: #f5f5f7;
-      display: none;
-      padding: 20px;
+      z-index: 0;
+    }
+    .bubble {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: move;
+      box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+      z-index: 1;
+      user-select: none;
+    }
+    .bubble:hover {
+      box-shadow: 8px 8px 20px rgba(0,0,0,0.4);
+    }
+    .bubble-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+    .bubble-name {
+      font-weight: bold;
+      color: white;
       text-align: center;
     }
-    .card {
+    #robot {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      z-index: 2;
+      animation: float 2s ease-in-out infinite;
+    }
+    #robot.grabbing {
+      transform: scale(1.1);
+    }
+    .carried-bubble {
+      position: absolute;
+      transform: translate(-50%, -130%);
+      z-index: -1;
+    }
+    #portal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      display: none;
+    }
+    .portal-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(49, 27, 146, 0.8);
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    .portal-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, white 0%, #4169e1 50%, #4b0082 100%);
+      box-shadow: 0 0 40px 10px rgba(138, 43, 226, 0.6);
+      transition: transform 1s ease-out;
+      pointer-events: none;
+    }
+    .content-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+    .content-card {
+      width: 90%;
+      max-width: 800px;
       background-color: white;
-      border-radius: 10px;
-      padding: 20px;
-      margin: 20px auto;
-      max-width: 600px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      padding: 30px;
+      pointer-events: auto;
+    }
+    .section-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      color: #333;
+      text-align: center;
     }
     .back-button {
-      display: inline-block;
+      display: block;
+      margin: 20px auto 0 auto;
       padding: 10px 20px;
-      background-color: #0066cc;
+      background-color: #2563eb;
       color: white;
-      border-radius: 20px;
-      text-decoration: none;
-      margin-top: 20px;
+      border: none;
+      border-radius: 30px;
+      font-size: 16px;
       cursor: pointer;
+    }
+    .back-button:hover {
+      background-color: #1d4ed8;
+    }
+    
+    /* Content styles */
+    .content-image {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .content-image img {
+      width: 150px;
+      height: 150px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: inline-block;
+    }
+    .content-text {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .content-text ul {
+      margin-left: 20px;
+      margin-bottom: 15px;
+    }
+    .content-text ul li {
+      margin-bottom: 8px;
+    }
+    .content-text ul ul {
+      margin-top: 8px;
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+      100% { transform: translateY(0px); }
     }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
+  <div id="bubbles-container"></div>
+  <div id="robot">
+    <svg viewBox="0 0 100 100" width="100%" height="100%">
+      <circle cx="50" cy="50" r="50" fill="#FFD700" />
+      <circle cx="50" cy="50" r="30" fill="#333" />
+      <!-- Eyes -->
+      <circle cx="35" cy="45" r="8" fill="#FFA500" />
+      <circle cx="32" cy="42" r="3" fill="white" />
+      <circle cx="65" cy="45" r="8" fill="#FFA500" />
+      <circle cx="62" cy="42" r="3" fill="white" />
+      <!-- Arms -->
+      <rect x="15" y="40" width="15" height="20" fill="#DAA520" rx="5" class="arm left-arm" />
+      <rect x="70" y="40" width="15" height="20" fill="#DAA520" rx="5" class="arm right-arm" />
+    </svg>
+  </div>
   
-  <div id="resultPage">
-    <h1 id="resultTitle">Result</h1>
-    <div class="card">
-      <div id="resultContent">Content will appear here</div>
+  <div id="portal">
+    <div class="portal-bg" id="portal-bg"></div>
+    <div class="portal-circle" id="portal-circle"></div>
+    <div class="content-container" id="content-container">
+      <div class="content-card">
+        <h1 class="section-title" id="section-title"></h1>
+        <div id="section-content"></div>
+        <button class="back-button" id="back-button">Back to Portfolio</button>
+      </div>
     </div>
-    <button class="back-button" id="backButton">Return to Canvas</button>
   </div>
 
   <script>
-    // Get canvas and context
+    // DOM elements
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const bubblesContainer = document.getElementById('bubbles-container');
+    const robot = document.getElementById('robot');
+    const portal = document.getElementById('portal');
+    const portalBg = document.getElementById('portal-bg');
+    const portalCircle = document.getElementById('portal-circle');
+    const contentContainer = document.getElementById('content-container');
+    const sectionTitle = document.getElementById('section-title');
+    const sectionContent = document.getElementById('section-content');
+    const backButton = document.getElementById('back-button');
     
     // Set canvas size
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     
-    // Config
-    const BUBBLE_SIZE = 200; // Large bubbles
+    // State variables
+    let targetBubble = null;
+    let isRobotGrabbing = false;
+    let robotHasGrabbed = false;
+    let currentBubbleElement = null;
+    let draggedElement = null;
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let clickStartTime = 0;
+    let clickStartX = 0;
+    let clickStartY = 0;
+    let bubblePositions = [];
+    let animationId = null;
     
-    // Tools data
-    const tools = [
-      { id: 'market', name: 'Market Analysis', icon: '📊', color: '#4CAF50' },
-      { id: 'competitor', name: 'Competitor Intel', icon: '🔍', color: '#2196F3' },
-      { id: 'strategy', name: 'Business Strategy', icon: '🎯', color: '#9C27B0' },
-      { id: 'forecast', name: 'Sales Forecast', icon: '📈', color: '#FF5722' },
-      { id: 'customer', name: 'Customer Insights', icon: '🧠', color: '#E91E63' }
+    // Portfolio sections
+    const sections = [
+      {
+        id: 'about',
+        name: 'About Kyle',
+        icon: '👨‍💻',
+        color: '#4CAF50',
+        content: `
+          <div class="content-image">
+            <!-- REPLACED with "Kyle -- Me.jpg" -->
+            <img src="images/Kyle -- Me.jpg" alt="Kyle Coleman" />
+          </div>
+          
+          <div class="content-text">
+            <ul>
+              <li><strong>Education:</strong> Sacramento State alumnus.</li>
+              <li><strong>Background:</strong> AI Engineer, Developer, and Data Analyst with a solid foundation in IT and MIS.</li>
+              <li><strong>Attributes:</strong> Noted for strong visual, spatial, and creative thinking skills that support innovative solutions.</li>
+              <li><strong>Mission:</strong> Passionate about AI and committed to advancing technology to improve humanity.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'prediction',
+        name: 'Prediction Models',
+        icon: '📈',
+        color: '#2196F3',
+        content: `
+          <div class="content-image">
+            <!-- REPLACED with "Sports_Data.png" -->
+            <img src="images/Sports_Data.png" alt="Prediction Models" />
+          </div>
+          
+          <div class="content-text">
+            <ul>
+              <li><strong>Overview:</strong> Advanced, multi-stage prediction models.</li>
+              <li><strong>Process:</strong> Uses AI agents to collect and refine data with rigorous verification.</li>
+              <li><strong>Quality:</strong> Meticulous checks eliminate assumptions and reduce hallucinations.</li>
+              <li><strong>Accuracy:</strong> Achieves an impressive 87% prediction accuracy!</li>
+              <li><strong>Outcome:</strong> Drives data-driven decisions with actionable insights.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'chatbots',
+        name: 'AI Chatbots',
+        icon: '🤖',
+        color: '#9C27B0',
+        content: `
+          <div class="content-image">
+            <!-- REPLACED with "Cute_Robot.png" -->
+            <img src="images/Cute_Robot.png" alt="AI Chatbots" />
+          </div>
+          
+          <div class="content-text">
+            <ul>
+              <li><strong>Project:</strong> Customer service chatbot that auto-responds to queries.</li>
+              <li><strong>Tech:</strong> Custom programming for robust, efficient workflows.</li>
+              <li><strong>Performance:</strong> Over 80% query resolution success with a 300% efficiency boost.</li>
+              <li><strong>Impact:</strong> Provides responsive and effective support that elevates customer engagement.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'future',
+        name: 'Future Projects',
+        icon: '🚀',
+        color: '#FF5722',
+        content: `
+          <div class="content-image">
+            <!-- REPLACED with "Brain_AI.png" -->
+            <img src="images/Brain_AI.png" alt="Future Projects" />
+          </div>
+          
+          <div class="content-text">
+            <ul>
+              <li><strong>Focus:</strong> Continuous innovation and exploration of emerging AI trends.</li>
+              <li>
+                <strong>AI Swarms:</strong>
+                <ul>
+                  <li><strong>Concept:</strong> Developing AI swarms—coordinated agents working together to tackle complex challenges.</li>
+                  <li><strong>Capabilities:</strong> Each agent features adaptive self-checks, modular responsiveness, and optimized resource management.</li>
+                  <li>
+                    <strong>Applications:</strong>
+                    <ul>
+                      <li><em>E-commerce:</em> Enhances recommendations, manages inventory, and efficiently advertises to target consumers.</li>
+                      <li><em>Tech Companies:</em> Improves system monitoring, resource allocation, and software deployment.</li>
+                      <li><em>AI Firms:</em> Accelerates data analysis, product development, and strategic decisions.</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li><strong>Vision:</strong> At the forefront of next-generation AI, Kyle is dedicated to transforming business operations through advanced automation and strategic insights, driving progress and improving humanity.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'contact',
+        name: 'Contact',
+        icon: '📧',
+        color: '#E91E63',
+        content: `
+          <div class="content-image">
+            <!-- REPLACED with "Clean_Kyle_Logo.png" -->
+            <img src="images/Clean_Kyle_Logo.png" alt="Contact" />
+          </div>
+          
+          <div class="content-text">
+            <ul>
+              <li><strong>Email:</strong> KyleDColeman1997@gmail.com</li>
+              <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/KyleDColeman/" target="_blank">https://www.linkedin.com/in/KyleDColeman/</a></li>
+              <li><strong>GitHub:</strong> <a href="https://github.com/KyleTheOracle" target="_blank">https://github.com/KyleTheOracle</a></li>
+            </ul>
+          </div>
+        `
+      }
     ];
     
-    // Robot state
-    let robot = {
-      x: canvas.width - 120,
-      y: canvas.height - 120,
-      size: 80,
-      animation: 0,
-      blinking: false,
-      processing: false,
-      targetBubble: null
-    };
-    
-    // Animation variables
-    let portalActive = false;
-    let portalSize = 0;
-    
     // Initialize bubbles
-    let bubbles = [];
-    let isDragging = false;
-    let draggedBubble = null;
-    let lastClickTime = 0;
-    
-    // Create bubbles in a circle
     function createBubbles() {
-      bubbles = [];
+      // Clear existing bubbles
+      bubblesContainer.innerHTML = '';
+      bubblePositions = [];
       
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      const radius = Math.min(canvas.width, canvas.height) * 0.3;
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const radius = Math.min(window.innerWidth, window.innerHeight) * 0.3;
       
-      tools.forEach((tool, index) => {
-        const angle = (index / tools.length) * Math.PI * 2;
-        const x = centerX + Math.cos(angle) * radius;
-        const y = centerY + Math.sin(angle) * radius;
+      sections.forEach((section, i) => {
+        const angle = (i / sections.length) * Math.PI * 2;
+        const randomOffset = Math.random() * 30 - 15;
+        const x = centerX + Math.cos(angle) * (radius + randomOffset);
+        const y = centerY + Math.sin(angle) * (radius + randomOffset);
         
-        bubbles.push({
-          id: tool.id,
-          name: tool.name,
-          icon: tool.icon,
-          color: tool.color,
-          x: x,
-          y: y,
-          size: BUBBLE_SIZE,
-          hover: false,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
-          squishX: 1,
-          squishY: 1
+        // Create bubble element
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.id = `bubble-${section.id}`;
+        bubble.style.left = `${x - 60}px`;
+        bubble.style.top = `${y - 60}px`;
+        bubble.style.backgroundColor = section.color;
+        
+        // Add content
+        bubble.innerHTML = `
+          <div class="bubble-icon">${section.icon}</div>
+          <div class="bubble-name">${section.name}</div>
+        `;
+        
+        // Store initial position and velocity
+        bubblePositions.push({
+          element: bubble,
+          id: section.id,
+          x: x - 60,
+          y: y - 60,
+          vx: Math.random() * 0.3 - 0.15,
+          vy: Math.random() * 0.3 - 0.15
         });
-      });
-    }
-    
-    // Function to lighten color
-    function lightenColor(color, percent) {
-      const num = parseInt(color.slice(1), 16);
-      const amt = Math.round(2.55 * percent);
-      const R = Math.min(255, ((num >> 16) & 0xFF) + amt);
-      const G = Math.min(255, ((num >> 8) & 0xFF) + amt);
-      const B = Math.min(255, (num & 0xFF) + amt);
-      return `#${(1 << 24 | R << 16 | G << 8 | B).toString(16).slice(1)}`;
-    }
-    
-    // Draw a rounded rectangle
-    function drawRoundedRect(x, y, width, height, radius) {
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + width - radius, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-      ctx.lineTo(x + width, y + height - radius);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-      ctx.lineTo(x + radius, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
-      ctx.closePath();
-    }
-    
-    // Update function
-    function update() {
-      // Update animation variables
-      robot.animation += 0.05;
-      robot.blinking = Math.random() < 0.005;
-      
-      // Update bubbles
-      bubbles.forEach(bubble => {
-        if (bubble === draggedBubble || bubble === robot.targetBubble) {
-          return;
-        }
         
-        // Move bubble
-        bubble.x += bubble.vx;
-        bubble.y += bubble.vy;
-        
-        // Boundary collision
-        const margin = 50;
-        const halfSize = bubble.size / 2;
-        
-        if (bubble.x - halfSize < margin) {
-          bubble.x = margin + halfSize;
-          bubble.vx *= -1;
-          bubble.squishX = 0.8;
-          bubble.squishY = 1.2;
-        } else if (bubble.x + halfSize > canvas.width - margin) {
-          bubble.x = canvas.width - margin - halfSize;
-          bubble.vx *= -1;
-          bubble.squishX = 0.8;
-          bubble.squishY = 1.2;
-        }
-        
-        if (bubble.y - halfSize < margin) {
-          bubble.y = margin + halfSize;
-          bubble.vy *= -1;
-          bubble.squishX = 1.2;
-          bubble.squishY = 0.8;
-        } else if (bubble.y + halfSize > canvas.height - margin) {
-          bubble.y = canvas.height - margin - halfSize;
-          bubble.vy *= -1;
-          bubble.squishX = 1.2;
-          bubble.squishY = 0.8;
-        }
-        
-        // Return to normal shape
-        bubble.squishX += (1 - bubble.squishX) * 0.1;
-        bubble.squishY += (1 - bubble.squishY) * 0.1;
-        
-        // Add randomness and damping
-        bubble.vx += (Math.random() - 0.5) * 0.01;
-        bubble.vy += (Math.random() - 0.5) * 0.01;
-        bubble.vx *= 0.99;
-        bubble.vy *= 0.99;
-      });
-      
-      // Handle robot processing
-      if (robot.processing && robot.targetBubble) {
-        const bubble = robot.targetBubble;
-        const dx = bubble.x - robot.x;
-        const dy = bubble.y - robot.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 10) {
-          robot.x += dx * 0.05;
-          robot.y += dy * 0.05;
-        } else {
-          // Start portal animation
-          portalActive = true;
+        // Add double-click handler for direct portal access
+        bubble.addEventListener('dblclick', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
           
-          if (portalSize < 300) {
-            portalSize += 5;
-          } else {
-            // Show results page
-            setTimeout(() => {
-              showResults(bubble);
-              
-              // Remove the bubble
-              bubbles = bubbles.filter(b => b !== bubble);
-              
-              // Reset robot and portal
-              portalActive = false;
-              portalSize = 0;
-              robot.processing = false;
-              robot.targetBubble = null;
-              robot.x = canvas.width - 120;
-              robot.y = canvas.height - 120;
-            }, 500);
-          }
-        }
-      }
-    }
-    
-    // Draw function
-    function draw() {
-      // Clear canvas
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Draw portal if active
-      if (portalActive) {
-        ctx.save();
-        ctx.translate(canvas.width/2, canvas.height/2);
-        
-        // Portal gradient
-        const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, portalSize);
-        gradient.addColorStop(0, 'rgba(120, 0, 255, 0.8)');
-        gradient.addColorStop(0.7, 'rgba(80, 0, 180, 0.5)');
-        gradient.addColorStop(1, 'rgba(50, 0, 120, 0)');
-        
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(0, 0, portalSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Portal swirl
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        
-        for (let i = 0; i < Math.PI * 6; i += 0.1) {
-          const radius = i * 6;
-          const x = Math.cos(i + robot.animation * 0.1) * radius/5;
-          const y = Math.sin(i + robot.animation * 0.1) * radius/5;
+          // Hide the bubble
+          this.style.opacity = '0';
+          currentBubbleElement = this;
           
-          if (i === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-          
-          if (radius > portalSize * 0.8) break;
-        }
-        ctx.stroke();
+          // Activate portal directly
+          activatePortal(section.id);
+        });
         
-        ctx.restore();
-      }
-      
-      // Draw bubbles
-      bubbles.forEach(bubble => {
-        ctx.save();
-        ctx.translate(bubble.x, bubble.y);
-        ctx.scale(bubble.squishX, bubble.squishY);
-        
-        // Shadow for 3D effect
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-        drawRoundedRect(-bubble.size/2 + 10, -bubble.size/2 + 10, bubble.size, bubble.size, bubble.size/6);
-        ctx.fill();
-        
-        // Main bubble body
-        const gradient = ctx.createLinearGradient(0, -bubble.size/2, 0, bubble.size/2);
-        gradient.addColorStop(0, lightenColor(bubble.color, 20));
-        gradient.addColorStop(1, bubble.color);
-        
-        ctx.fillStyle = bubble.hover ? lightenColor(bubble.color, 30) : gradient;
-        drawRoundedRect(-bubble.size/2, -bubble.size/2, bubble.size, bubble.size, bubble.size/6);
-        ctx.fill();
-        
-        // Top highlight
-        const highlightGradient = ctx.createLinearGradient(0, -bubble.size/2, 0, 0);
-        highlightGradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-        highlightGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        
-        ctx.fillStyle = highlightGradient;
-        ctx.beginPath();
-        ctx.moveTo(-bubble.size/2 + bubble.size/6, -bubble.size/2);
-        ctx.lineTo(bubble.size/2 - bubble.size/6, -bubble.size/2);
-        ctx.quadraticCurveTo(bubble.size/2, -bubble.size/2, bubble.size/2, -bubble.size/2 + bubble.size/6);
-        ctx.lineTo(bubble.size/2, 0);
-        ctx.lineTo(-bubble.size/2, 0);
-        ctx.lineTo(-bubble.size/2, -bubble.size/2 + bubble.size/6);
-        ctx.quadraticCurveTo(-bubble.size/2, -bubble.size/2, -bubble.size/2 + bubble.size/6, -bubble.size/2);
-        ctx.closePath();
-        ctx.fill();
-        
-        // Highlight border when hovered
-        if (bubble.hover) {
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-          ctx.lineWidth = 4;
-          drawRoundedRect(-bubble.size/2 - 2, -bubble.size/2 - 2, bubble.size + 4, bubble.size + 4, bubble.size/6 + 2);
-          ctx.stroke();
-        }
-        
-        // Draw content
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        // Icon
-        ctx.font = `${bubble.size/4}px Arial`;
-        ctx.fillText(bubble.icon, 0, -bubble.size/6);
-        
-        // Text
-        ctx.font = `bold ${bubble.size/10}px Arial`;
-        ctx.fillText(bubble.name, 0, bubble.size/6);
-        
-        ctx.restore();
+        bubblesContainer.appendChild(bubble);
       });
       
-      // Draw robot
-      drawRobot();
-      
-      // Draw instructions
-      if (!robot.processing && !portalActive) {
-        // Main instruction
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        drawRoundedRect(canvas.width/2 - 200, canvas.height - 80, 400, 40, 20);
-        ctx.fill();
-        
-        ctx.fillStyle = 'white';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('Drag bubbles or click one to process with the robot', canvas.width/2, canvas.height - 60);
-        
-        // Double-click instruction
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        drawRoundedRect(canvas.width/2 - 150, canvas.height - 30, 300, 30, 15);
-        ctx.fill();
-        
-        ctx.fillStyle = 'white';
-        ctx.font = '14px Arial';
-        ctx.fillText('Double-click on bubble to learn more', canvas.width/2, canvas.height - 15);
+      // Start floating animation
+      if (!animationId) {
+        startFloatingAnimation();
       }
     }
     
-    // Draw the robot
-    function drawRobot() {
-      ctx.save();
-      ctx.translate(robot.x, robot.y);
-      
-      // Head shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-      ctx.beginPath();
-      ctx.arc(3, 3, robot.size/2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Head gradient
-      const headGradient = ctx.createLinearGradient(-robot.size/2, -robot.size/2, robot.size/2, robot.size/2);
-      headGradient.addColorStop(0, '#FFD700');
-      headGradient.addColorStop(1, '#DAA520');
-      
-      ctx.fillStyle = headGradient;
-      ctx.beginPath();
-      ctx.arc(0, 0, robot.size/2, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Face plate
-      ctx.fillStyle = '#333';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, robot.size*0.3, robot.size*0.2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Eyes
-      const eyeSize = robot.size/8;
-      const eyeSpacing = robot.size/5;
-      
-      ctx.fillStyle = portalActive ? '#FF3333' : '#FFA500';
-      
-      // Left eye
-      ctx.beginPath();
-      if (robot.blinking) {
-        ctx.fillRect(-eyeSpacing - eyeSize/2, -eyeSize/4, eyeSize, eyeSize/4);
-      } else {
-        ctx.arc(-eyeSpacing, 0, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Eye highlight
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(-eyeSpacing - eyeSize/2, -eyeSize/2, eyeSize/3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      // Right eye
-      ctx.fillStyle = portalActive ? '#FF3333' : '#FFA500';
-      ctx.beginPath();
-      if (robot.blinking) {
-        ctx.fillRect(eyeSpacing - eyeSize/2, -eyeSize/4, eyeSize, eyeSize/4);
-      } else {
-        ctx.arc(eyeSpacing, 0, eyeSize, 0, Math.PI * 2);
-        ctx.fill();
-        
-        // Eye highlight
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(eyeSpacing - eyeSize/2, -eyeSize/2, eyeSize/3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      
-      // Antennas
-      const antennaHeight = robot.size/3;
-      const wobble = Math.sin(robot.animation) * 5;
-      
-      // Left antenna
-      ctx.save();
-      ctx.translate(-robot.size/4, -robot.size/2);
-      ctx.rotate((wobble - 5) * Math.PI/180);
-      
-      ctx.fillStyle = '#DAA520';
-      ctx.fillRect(-1, -antennaHeight, 2, antennaHeight);
-      
-      ctx.fillStyle = '#FFA500';
-      ctx.beginPath();
-      ctx.arc(0, -antennaHeight, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      
-      // Right antenna
-      ctx.save();
-      ctx.translate(robot.size/4, -robot.size/2);
-      ctx.rotate((-wobble - 5) * Math.PI/180);
-      
-      ctx.fillStyle = '#DAA520';
-      ctx.fillRect(-1, -antennaHeight, 2, antennaHeight);
-      
-      ctx.fillStyle = '#FFA500';
-      ctx.beginPath();
-      ctx.arc(0, -antennaHeight, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      
-      ctx.restore();
+    // Initialize robot position
+    function initRobot() {
+      robot.style.transition = 'left 0.5s, top 0.5s';
+      robot.style.left = `${window.innerWidth - 100}px`;
+      robot.style.top = `${window.innerHeight - 100}px`;
     }
     
-    // Show results page
-    function showResults(bubble) {
-      document.getElementById('resultTitle').textContent = bubble.name;
-      
-      let content = '';
-      switch(bubble.id) {
-        case 'market':
-          content = `
-            <h2>Market Analysis Results</h2>
-            <p><strong>Market Size:</strong> $2.3 Billion</p>
-            <p><strong>Growth Rate:</strong> 8.7% Year-over-Year</p>
-            <p><strong>Key Recommendation:</strong> Focus on expanding in the Western European market.</p>
-          `;
-          break;
-        case 'competitor':
-          content = `
-            <h2>Competitor Intelligence</h2>
-            <p><strong>Major Competitors:</strong> 7</p>
-            <p><strong>Leading Competitor:</strong> TechGiant Inc.</p>
-            <p><strong>Key Recommendation:</strong> Differentiate through enhanced product integrations.</p>
-          `;
-          break;
-        case 'strategy':
-          content = `
-            <h2>Strategic Recommendations</h2>
-            <p><strong>CAGR:</strong> 14.2%</p>
-            <p><strong>ROI:</strong> 127%</p>
-            <p><strong>Key Recommendation:</strong> Implement a product-led growth strategy.</p>
-          `;
-          break;
-        case 'forecast':
-          content = `
-            <h2>Sales Forecast</h2>
-            <p><strong>Annual Revenue:</strong> $12.7M</p>
-            <p><strong>Projected Growth:</strong> 23%</p>
-            <p><strong>Key Recommendation:</strong> Create specialized sales teams for enterprise accounts.</p>
-          `;
-          break;
-        case 'customer':
-          content = `
-            <h2>Customer Insights</h2>
-            <p><strong>NPS Score:</strong> 68</p>
-            <p><strong>Customer Retention:</strong> 87%</p>
-            <p><strong>Key Recommendation:</strong> Create personalized onboarding for different user segments.</p>
-          `;
-          break;
-      }
-      
-      document.getElementById('resultContent').innerHTML = content;
-      document.getElementById('resultPage').style.display = 'block';
-    }
-    
-    // Handle mouse movement
-    canvas.addEventListener('mousemove', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      // Update hover states
-      let hovering = false;
-      bubbles.forEach(bubble => {
-        const dx = mouseX - bubble.x;
-        const dy = mouseY - bubble.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        bubble.hover = distance < bubble.size / 2;
-        if (bubble.hover) hovering = true;
-      });
-      
-      canvas.style.cursor = hovering ? 'pointer' : 'default';
-      
-      // Update dragged bubble position
-      if (isDragging && draggedBubble) {
-        draggedBubble.x = mouseX;
-        draggedBubble.y = mouseY;
-      }
-    });
-    
-    // Handle mouse down
-    canvas.addEventListener('mousedown', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      
-      // Check for double click
-      const now = new Date().getTime();
-      const timeSinceLastClick = now - lastClickTime;
-      lastClickTime = now;
-      
-      // Check each bubble
-      for (let i = bubbles.length - 1; i >= 0; i--) {
-        const bubble = bubbles[i];
-        const dx = mouseX - bubble.x;
-        const dy = mouseY - bubble.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < bubble.size / 2) {
-          // Double click
-          if (timeSinceLastClick < 300) {
-            showResults(bubble);
+    // Start floating animation for bubbles
+    function startFloatingAnimation() {
+      function animate() {
+        bubblePositions.forEach(pos => {
+          // Skip if being dragged
+          if (isDragging && draggedElement && draggedElement.id === `bubble-${pos.id}`) {
             return;
           }
           
-          // Start dragging
-          isDragging = true;
-          draggedBubble = bubble;
+          // Skip if being carried by robot
+          if (robotHasGrabbed && currentBubbleElement && currentBubbleElement.id === `bubble-${pos.id}`) {
+            return;
+          }
           
-          // Move to top
-          bubbles.splice(i, 1);
-          bubbles.push(bubble);
-          return;
-        }
+          // Update position based on velocity
+          pos.x += pos.vx;
+          pos.y += pos.vy;
+          
+          // Dampen velocity
+          pos.vx *= 0.99;
+          pos.vy *= 0.99;
+          
+          // Handle boundaries
+          if (pos.x < 0) {
+            pos.x = 0;
+            pos.vx = Math.abs(pos.vx) * 0.8;
+          } else if (pos.x > window.innerWidth - 120) {
+            pos.x = window.innerWidth - 120;
+            pos.vx = -Math.abs(pos.vx) * 0.8;
+          }
+          
+          if (pos.y < 0) {
+            pos.y = 0;
+            pos.vy = Math.abs(pos.vy) * 0.8;
+          } else if (pos.y > window.innerHeight - 120) {
+            pos.y = window.innerHeight - 120;
+            pos.vy = -Math.abs(pos.vy) * 0.8;
+          }
+          
+          // Add small random motion if nearly stopped
+          if (Math.abs(pos.vx) < 0.05 && Math.abs(pos.vy) < 0.05) {
+            if (Math.random() < 0.01) {
+              pos.vx += (Math.random() - 0.5) * 0.2;
+              pos.vy += (Math.random() - 0.5) * 0.2;
+            }
+          }
+          
+          // Update element position
+          pos.element.style.left = `${pos.x}px`;
+          pos.element.style.top = `${pos.y}px`;
+        });
+        
+        animationId = requestAnimationFrame(animate);
       }
-    });
+      
+      animate();
+    }
     
-    // Handle mouse up
-    canvas.addEventListener('mouseup', (e) => {
-      if (isDragging && draggedBubble) {
-        // Check if it was a click
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
+    // Basic dragging functionality
+    function setupDragging() {
+      // Mouse down - start dragging
+      document.addEventListener('mousedown', function(e) {
+        if (robotHasGrabbed) return;
         
-        const dx = mouseX - draggedBubble.x;
-        const dy = mouseY - draggedBubble.y;
-        const dragDistance = Math.sqrt(dx * dx + dy * dy);
+        // Check if we clicked on a bubble
+        const bubble = e.target.closest('.bubble');
+        if (!bubble) return;
         
-        if (dragDistance < 5 && !robot.processing) {
-          robot.processing = true;
-          robot.targetBubble = draggedBubble;
+        // Prevent default behavior
+        e.preventDefault();
+        
+        // Store time and position for click vs drag detection
+        clickStartTime = Date.now();
+        clickStartX = e.clientX;
+        clickStartY = e.clientY;
+        
+        // Get bubble position
+        const rect = bubble.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left;
+        dragOffsetY = e.clientY - rect.top;
+        
+        // Start dragging
+        isDragging = true;
+        draggedElement = bubble;
+        
+        // Increase z-index during drag
+        draggedElement.style.zIndex = 10;
+      });
+      
+      // Mouse move - update position
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging || !draggedElement) return;
+        
+        // Calculate new position
+        const x = e.clientX - dragOffsetX;
+        const y = e.clientY - dragOffsetY;
+        
+        // Update element position
+        draggedElement.style.left = `${x}px`;
+        draggedElement.style.top = `${y}px`;
+        
+        // Update position in our tracking array
+        const bubbleId = draggedElement.id.replace('bubble-', '');
+        const pos = bubblePositions.find(p => p.id === bubbleId);
+        if (pos) {
+          pos.x = x;
+          pos.y = y;
+          pos.vx = 0;
+          pos.vy = 0;
+        }
+      });
+      
+      // Mouse up - end dragging
+      document.addEventListener('mouseup', function(e) {
+        if (!isDragging || !draggedElement) return;
+        
+        // Check if this was a click (short duration, minimal movement)
+        const duration = Date.now() - clickStartTime;
+        const distance = Math.sqrt(
+          Math.pow(e.clientX - clickStartX, 2) + 
+          Math.pow(e.clientY - clickStartY, 2)
+        );
+        
+        // If this was a click, send robot to grab the bubble
+        if (duration < 200 && distance < 5) {
+          const bubbleId = draggedElement.id.replace('bubble-', '');
+          const section = sections.find(s => s.id === bubbleId);
+          if (section) {
+            sendRobotTo(draggedElement, section);
+          }
+        } else {
+          // This was a drag - add some momentum
+          const bubbleId = draggedElement.id.replace('bubble-', '');
+          const pos = bubblePositions.find(p => p.id === bubbleId);
+          if (pos) {
+            // Add random velocity for a throw effect
+            pos.vx = (Math.random() - 0.5) * 2;
+            pos.vy = (Math.random() - 0.5) * 2;
+          }
         }
         
+        // Reset z-index
+        draggedElement.style.zIndex = 1;
+        
+        // End dragging
         isDragging = false;
-        draggedBubble = null;
+        draggedElement = null;
+      });
+    }
+    
+    // Send robot to grab a bubble
+    function sendRobotTo(bubbleElement, section) {
+      if (!bubbleElement) return;
+      
+      const rect = bubbleElement.getBoundingClientRect();
+      const bubbleX = rect.left + rect.width / 2;
+      const bubbleY = rect.top + rect.height / 2;
+      
+      // Move robot to bubble
+      robot.style.transition = 'left 0.5s, top 0.5s';
+      robot.style.left = `${bubbleX - 40}px`;
+      robot.style.top = `${bubbleY - 40}px`;
+      
+      // When robot reaches bubble
+      setTimeout(() => {
+        // Grab the bubble
+        robot.classList.add('grabbing');
+        
+        // Create a mini version of the bubble to carry
+        const carriedBubble = document.createElement('div');
+        carriedBubble.className = 'carried-bubble';
+        carriedBubble.style.width = '80px';
+        carriedBubble.style.height = '80px';
+        carriedBubble.style.backgroundColor = section.color;
+        carriedBubble.style.borderRadius = '15px';
+        carriedBubble.innerHTML = `
+          <div class="bubble-icon" style="font-size: 30px">${section.icon}</div>
+        `;
+        
+        // Add bubble to robot
+        robot.appendChild(carriedBubble);
+        
+        // Hide original bubble
+        bubbleElement.style.opacity = '0';
+        currentBubbleElement = bubbleElement;
+        
+        // Set state
+        targetBubble = section.id;
+        isRobotGrabbing = true;
+        robotHasGrabbed = true;
+        
+        // Move to center and open portal
+        moveToCenter(section.id);
+      }, 500);
+    }
+    
+    // Move robot to center
+    function moveToCenter(sectionId) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      
+      // Smooth transition to center
+      robot.style.transition = 'left 1s cubic-bezier(0.4, 0, 0.2, 1), top 1s cubic-bezier(0.4, 0, 0.2, 1)';
+      robot.style.left = `${centerX - 40}px`;
+      robot.style.top = `${centerY - 40}px`;
+      
+      // When robot reaches center, open portal
+      setTimeout(() => {
+        setTimeout(() => {
+          activatePortal(sectionId);
+        }, 300);
+      }, 1000);
+    }
+    
+    // Activate portal
+    function activatePortal(sectionId) {
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) return;
+      
+      // Set content
+      sectionTitle.textContent = section.name;
+      sectionContent.innerHTML = section.content;
+      
+      // Show portal
+      portal.style.display = 'block';
+      
+      // Animate portal opening
+      setTimeout(() => {
+        portalBg.style.opacity = '1';
+      }, 0);
+      
+      setTimeout(() => {
+        portalCircle.style.transform = 'translate(-50%, -50%) scale(30)';
+      }, 100);
+      
+      setTimeout(() => {
+        contentContainer.style.opacity = '1';
+        contentContainer.style.pointerEvents = 'auto';
+      }, 1000);
+    }
+    
+    // Close portal
+    function closePortal() {
+      // Hide content
+      contentContainer.style.opacity = '0';
+      contentContainer.style.pointerEvents = 'none';
+      
+      // Collapse portal
+      setTimeout(() => {
+        portalCircle.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 100);
+      
+      // Fade out background
+      setTimeout(() => {
+        portalBg.style.opacity = '0';
+      }, 800);
+      
+      // Hide portal container and reset everything
+      setTimeout(() => {
+        portal.style.display = 'none';
+        resetEverything();
+      }, 1300);
+    }
+    
+    // Reset everything
+    function resetEverything() {
+      // Stop animation
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
       }
-    });
+      
+      // Reset state
+      targetBubble = null;
+      isRobotGrabbing = false;
+      robotHasGrabbed = false;
+      currentBubbleElement = null;
+      isDragging = false;
+      draggedElement = null;
+      
+      // Reset robot
+      robot.classList.remove('grabbing');
+      const carriedBubble = robot.querySelector('.carried-bubble');
+      if (carriedBubble) {
+        robot.removeChild(carriedBubble);
+      }
+      
+      // Reset robot position
+      robot.style.transition = 'left 0.8s, top 0.8s';
+      robot.style.left = `${window.innerWidth - 100}px`;
+      robot.style.top = `${window.innerHeight - 100}px`;
+      
+      // Remove and recreate all bubbles
+      createBubbles();
+    }
     
     // Handle window resize
-    window.addEventListener('resize', () => {
+    function handleResize() {
+      // Stop animation
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      
+      // Resize canvas
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       
-      // Update robot position
-      robot.x = canvas.width - 120;
-      robot.y = canvas.height - 120;
+      // Update background
+      drawBackground();
       
       // Recreate bubbles
       createBubbles();
-    });
-    
-    // Back button
-    document.getElementById('backButton').addEventListener('click', () => {
-      document.getElementById('resultPage').style.display = 'none';
       
-      // Recreate bubbles if all are gone
-      if (bubbles.length === 0) {
-        createBubbles();
+      // Reset robot position if not in use
+      if (!robotHasGrabbed) {
+        robot.style.left = `${window.innerWidth - 100}px`;
+        robot.style.top = `${window.innerHeight - 100}px`;
       }
-    });
+    }
     
-    // Animation loop
-    function animate() {
-      update();
-      draw();
-      requestAnimationFrame(animate);
+    // Draw background
+    function drawBackground() {
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#1a2a6c');
+      gradient.addColorStop(0.5, '#b21f1f');
+      gradient.addColorStop(1, '#fdbb2d');
+      
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
     
     // Initialize
-    createBubbles();
-    animate();
+    function init() {
+      drawBackground();
+      createBubbles();
+      initRobot();
+      setupDragging();
+      
+      // Add event listeners
+      window.addEventListener('resize', handleResize);
+      backButton.addEventListener('click', closePortal);
+    }
+    
+    // Start everything
+    init();
   </script>
 </body>
 </html>
