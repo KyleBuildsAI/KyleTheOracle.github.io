@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kyle Coleman - Portfolio</title>
+  <style>
+    /* Reset and basic styling */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    #canvas {
+      display: block;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    .bubble {
+      position: absolute;
+      width: 120px;
+      height: 120px;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: move;
+      box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
+      z-index: 1;
+      user-select: none;
+    }
+    .bubble:hover {
+      box-shadow: 8px 8px 20px rgba(0,0,0,0.4);
+    }
+    .bubble-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+    .bubble-name {
+      font-weight: bold;
+      color: white;
+      text-align: center;
+    }
+    #robot {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      z-index: 2;
+      animation: float 2s ease-in-out infinite;
+    }
+    #robot.grabbing {
+      transform: scale(1.1);
+    }
+    .carried-bubble {
+      position: absolute;
+      transform: translate(-50%, -130%);
+      z-index: -1;
+    }
+    #portal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      display: none;
+    }
+    .portal-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(49, 27, 146, 0.8);
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    .portal-circle {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, white 0%, #4169e1 50%, #4b0082 100%);
+      box-shadow: 0 0 40px 10px rgba(138, 43, 226, 0.6);
+      transition: transform 1s ease-out;
+      pointer-events: none;
+    }
+    .content-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+    .content-card {
+      width: 90%;
+      max-width: 800px;
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      padding: 30px;
+      pointer-events: auto;
+    }
+    .section-title {
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      color: #333;
+      text-align: center;
+    }
+    .back-button {
+      display: block;
+      margin: 20px auto 0 auto;
+      padding: 10px 20px;
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .back-button:hover {
+      background-color: #1d4ed8;
+    }
+    /* Content styles */
+    .content-image {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+    .content-image img {
+      width: 150px;
+      height: 150px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      display: inline-block;
+    }
+    .content-text {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .content-text ul {
+      margin-left: 20px;
+      margin-bottom: 15px;
+    }
+    .content-text ul li {
+      margin-bottom: 8px;
+    }
+    .content-text ul ul {
+      margin-top: 8px;
+    }
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+      100% { transform: translateY(0px); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <div id="bubbles-container"></div>
+  <div id="robot">
+    <svg viewBox="0 0 100 100" width="100%" height="100%">
+      <circle cx="50" cy="50" r="50" fill="#FFD700" />
+      <circle cx="50" cy="50" r="30" fill="#333" />
+      <!-- Eyes -->
+      <circle cx="35" cy="45" r="8" fill="#FFA500" />
+      <circle cx="32" cy="42" r="3" fill="white" />
+      <circle cx="65" cy="45" r="8" fill="#FFA500" />
+      <circle cx="62" cy="42" r="3" fill="white" />
+      <!-- Arms -->
+      <rect x="15" y="40" width="15" height="20" fill="#DAA520" rx="5" class="arm left-arm" />
+      <rect x="70" y="40" width="15" height="20" fill="#DAA520" rx="5" class="arm right-arm" />
+    </svg>
+  </div>
+  
+  <div id="portal">
+    <div class="portal-bg" id="portal-bg"></div>
+    <div class="portal-circle" id="portal-circle"></div>
+    <div class="content-container" id="content-container">
+      <div class="content-card">
+        <h1 class="section-title" id="section-title"></h1>
+        <div id="section-content"></div>
+        <button class="back-button" id="back-button">Back to Portfolio</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM elements
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const bubblesContainer = document.getElementById('bubbles-container');
+    const robot = document.getElementById('robot');
+    const portal = document.getElementById('portal');
+    const portalBg = document.getElementById('portal-bg');
+    const portalCircle = document.getElementById('portal-circle');
+    const contentContainer = document.getElementById('content-container');
+    const sectionTitle = document.getElementById('section-title');
+    const sectionContent = document.getElementById('section-content');
+    const backButton = document.getElementById('back-button');
+    
+    // Set canvas size
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // State variables
+    let targetBubble = null;
+    let isRobotGrabbing = false;
+    let robotHasGrabbed = false;
+    let currentBubbleElement = null;
+    let draggedElement = null;
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let clickStartTime = 0;
+    let clickStartX = 0;
+    let clickStartY = 0;
+    let bubblePositions = [];
+    let animationId = null;
+    
+    // Portfolio sections with updated Imgur URLs
+    const sections = [
+      {
+        id: 'about',
+        name: 'About Kyle',
+        icon: '👨‍💻',
+        color: '#4CAF50',
+        content: `
+          <div class="content-image">
+            <img src="https://i.imgur.com/Q49K5Ju.jpg" alt="Kyle Coleman" />
+          </div>
+          <div class="content-text">
+            <ul>
+              <li><strong>Education:</strong> Sacramento State alumnus.</li>
+              <li><strong>Background:</strong> AI Engineer, Developer, and Data Analyst with a solid foundation in IT and MIS.</li>
+              <li><strong>Attributes:</strong> Noted for strong visual, spatial, and creative thinking skills that support innovative solutions.</li>
+              <li><strong>Mission:</strong> Passionate about AI and committed to advancing technology to improve humanity.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'prediction',
+        name: 'Prediction Models',
+        icon: '📈',
+        color: '#2196F3',
+        content: `
+          <div class="content-image">
+            <img src="https://i.imgur.com/EFTvI5Y.jpg" alt="Prediction Models" />
+          </div>
+          <div class="content-text">
+            <ul>
+              <li><strong>Overview:</strong> Advanced, multi-stage prediction models.</li>
+              <li><strong>Process:</strong> Uses AI agents to collect and refine data with rigorous verification.</li>
+              <li><strong>Quality:</strong> Meticulous checks eliminate assumptions and reduce hallucinations.</li>
+              <li><strong>Accuracy:</strong> Achieves an impressive 87% prediction accuracy!</li>
+              <li><strong>Outcome:</strong> Drives data-driven decisions with actionable insights.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'chatbots',
+        name: 'AI Chatbots',
+        icon: '🤖',
+        color: '#9C27B0',
+        content: `
+          <div class="content-image">
+            <img src="https://i.imgur.com/vZx1Ags.jpg" alt="AI Chatbots" />
+          </div>
+          <div class="content-text">
+            <ul>
+              <li><strong>Project:</strong> Customer service chatbot that auto-responds to queries.</li>
+              <li><strong>Tech:</strong> Custom programming for robust, efficient workflows.</li>
+              <li><strong>Performance:</strong> Over 80% query resolution success with a 300% efficiency boost.</li>
+              <li><strong>Impact:</strong> Provides responsive and effective support that elevates customer engagement.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'future',
+        name: 'Future Projects',
+        icon: '🚀',
+        color: '#FF5722',
+        content: `
+          <div class="content-image">
+            <img src="//imgur.com/a/f4IUvKu" alt="Future Projects" />
+          </div>
+          <div class="content-text">
+            <ul>
+              <li><strong>Focus:</strong> Continuous innovation and exploration of emerging AI trends.</li>
+              <li>
+                <strong>AI Swarms:</strong>
+                <ul>
+                  <li><strong>Concept:</strong> Developing AI swarms—coordinated agents working together to tackle complex challenges.</li>
+                  <li><strong>Capabilities:</strong> Each agent features adaptive self-checks, modular responsiveness, and optimized resource management.</li>
+                  <li>
+                    <strong>Applications:</strong>
+                    <ul>
+                      <li><em>E-commerce:</em> Enhances recommendations, manages inventory, and efficiently advertises to target consumers.</li>
+                      <li><em>Tech Companies:</em> Improves system monitoring, resource allocation, and software deployment.</li>
+                      <li><em>AI Firms:</em> Accelerates data analysis, product development, and strategic decisions.</li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+              <li><strong>Vision:</strong> At the forefront of next-generation AI, Kyle is dedicated to transforming business operations through advanced automation and strategic insights, driving progress and improving humanity.</li>
+            </ul>
+          </div>
+        `
+      },
+      {
+        id: 'contact',
+        name: 'Contact',
+        icon: '📧',
+        color: '#E91E63',
+        content: `
+          <div class="content-image">
+            <img src="https://i.imgur.com/6sPRlcL.jpg" alt="Contact" />
+          </div>
+          <div class="content-text">
+            <ul>
+              <li><strong>Email:</strong> KyleDColeman1997@gmail.com</li>
+              <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/KyleDColeman/" target="_blank">https://www.linkedin.com/in/KyleDColeman/</a></li>
+              <li><strong>GitHub:</strong> <a href="https://github.com/KyleTheOracle" target="_blank">https://github.com/KyleTheOracle</a></li>
+            </ul>
+          </div>
+        `
+      }
+    ];
+    
+    // Initialize bubbles
+    function createBubbles() {
+      bubblesContainer.innerHTML = '';
+      bubblePositions = [];
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const radius = Math.min(window.innerWidth, window.innerHeight) * 0.3;
+      
+      sections.forEach((section, i) => {
+        const angle = (i / sections.length) * Math.PI * 2;
+        const randomOffset = Math.random() * 30 - 15;
+        const x = centerX + Math.cos(angle) * (radius + randomOffset);
+        const y = centerY + Math.sin(angle) * (radius + randomOffset);
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.id = `bubble-${section.id}`;
+        bubble.style.left = `${x - 60}px`;
+        bubble.style.top = `${y - 60}px`;
+        bubble.style.backgroundColor = section.color;
+        bubble.innerHTML = `
+          <div class="bubble-icon">${section.icon}</div>
+          <div class="bubble-name">${section.name}</div>
+        `;
+        bubblePositions.push({
+          element: bubble,
+          id: section.id,
+          x: x - 60,
+          y: y - 60,
+          vx: Math.random() * 0.3 - 0.15,
+          vy: Math.random() * 0.3 - 0.15
+        });
+        bubble.addEventListener('dblclick', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.style.opacity = '0';
+          currentBubbleElement = this;
+          activatePortal(section.id);
+        });
+        bubblesContainer.appendChild(bubble);
+      });
+      if (!animationId) {
+        startFloatingAnimation();
+      }
+    }
+    
+    // Initialize robot position
+    function initRobot() {
+      robot.style.transition = 'left 0.5s, top 0.5s';
+      robot.style.left = `${window.innerWidth - 100}px`;
+      robot.style.top = `${window.innerHeight - 100}px`;
+    }
+    
+    // Start floating animation for bubbles
+    function startFloatingAnimation() {
+      function animate() {
+        bubblePositions.forEach(pos => {
+          if (isDragging && draggedElement && draggedElement.id === `bubble-${pos.id}`) return;
+          if (robotHasGrabbed && currentBubbleElement && currentBubbleElement.id === `bubble-${pos.id}`) return;
+          pos.x += pos.vx;
+          pos.y += pos.vy;
+          pos.vx *= 0.99;
+          pos.vy *= 0.99;
+          if (pos.x < 0) {
+            pos.x = 0;
+            pos.vx = Math.abs(pos.vx) * 0.8;
+          } else if (pos.x > window.innerWidth - 120) {
+            pos.x = window.innerWidth - 120;
+            pos.vx = -Math.abs(pos.vx) * 0.8;
+          }
+          if (pos.y < 0) {
+            pos.y = 0;
+            pos.vy = Math.abs(pos.vy) * 0.8;
+          } else if (pos.y > window.innerHeight - 120) {
+            pos.y = window.innerHeight - 120;
+            pos.vy = -Math.abs(pos.vy) * 0.8;
+          }
+          if (Math.abs(pos.vx) < 0.05 && Math.abs(pos.vy) < 0.05) {
+            if (Math.random() < 0.01) {
+              pos.vx += (Math.random() - 0.5) * 0.2;
+              pos.vy += (Math.random() - 0.5) * 0.2;
+            }
+          }
+          pos.element.style.left = `${pos.x}px`;
+          pos.element.style.top = `${pos.y}px`;
+        });
+        animationId = requestAnimationFrame(animate);
+      }
+      animate();
+    }
+    
+    // Setup dragging functionality
+    function setupDragging() {
+      document.addEventListener('mousedown', function(e) {
+        if (robotHasGrabbed) return;
+        const bubble = e.target.closest('.bubble');
+        if (!bubble) return;
+        e.preventDefault();
+        clickStartTime = Date.now();
+        clickStartX = e.clientX;
+        clickStartY = e.clientY;
+        const rect = bubble.getBoundingClientRect();
+        dragOffsetX = e.clientX - rect.left;
+        dragOffsetY = e.clientY - rect.top;
+        isDragging = true;
+        draggedElement = bubble;
+        draggedElement.style.zIndex = 10;
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging || !draggedElement) return;
+        const x = e.clientX - dragOffsetX;
+        const y = e.clientY - dragOffsetY;
+        draggedElement.style.left = `${x}px`;
+        draggedElement.style.top = `${y}px`;
+        const bubbleId = draggedElement.id.replace('bubble-', '');
+        const pos = bubblePositions.find(p => p.id === bubbleId);
+        if (pos) {
+          pos.x = x;
+          pos.y = y;
+          pos.vx = 0;
+          pos.vy = 0;
+        }
+      });
+      
+      document.addEventListener('mouseup', function(e) {
+        if (!isDragging || !draggedElement) return;
+        const duration = Date.now() - clickStartTime;
+        const distance = Math.sqrt(Math.pow(e.clientX - clickStartX, 2) + Math.pow(e.clientY - clickStartY, 2));
+        if (duration < 200 && distance < 5) {
+          const bubbleId = draggedElement.id.replace('bubble-', '');
+          const section = sections.find(s => s.id === bubbleId);
+          if (section) {
+            sendRobotTo(draggedElement, section);
+          }
+        } else {
+          const bubbleId = draggedElement.id.replace('bubble-', '');
+          const pos = bubblePositions.find(p => p.id === bubbleId);
+          if (pos) {
+            pos.vx = (Math.random() - 0.5) * 2;
+            pos.vy = (Math.random() - 0.5) * 2;
+          }
+        }
+        draggedElement.style.zIndex = 1;
+        isDragging = false;
+        draggedElement = null;
+      });
+    }
+    
+    // Send robot to grab a bubble
+    function sendRobotTo(bubbleElement, section) {
+      if (!bubbleElement) return;
+      const rect = bubbleElement.getBoundingClientRect();
+      const bubbleX = rect.left + rect.width / 2;
+      const bubbleY = rect.top + rect.height / 2;
+      robot.style.transition = 'left 0.5s, top 0.5s';
+      robot.style.left = `${bubbleX - 40}px`;
+      robot.style.top = `${bubbleY - 40}px`;
+      setTimeout(() => {
+        robot.classList.add('grabbing');
+        const carriedBubble = document.createElement('div');
+        carriedBubble.className = 'carried-bubble';
+        carriedBubble.style.width = '80px';
+        carriedBubble.style.height = '80px';
+        carriedBubble.style.backgroundColor = section.color;
+        carriedBubble.style.borderRadius = '15px';
+        carriedBubble.innerHTML = `<div class="bubble-icon" style="font-size: 30px">${section.icon}</div>`;
+        robot.appendChild(carriedBubble);
+        bubbleElement.style.opacity = '0';
+        currentBubbleElement = bubbleElement;
+        targetBubble = section.id;
+        isRobotGrabbing = true;
+        robotHasGrabbed = true;
+        moveToCenter(section.id);
+      }, 500);
+    }
+    
+    // Move robot to center and open portal
+    function moveToCenter(sectionId) {
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      robot.style.transition = 'left 1s cubic-bezier(0.4, 0, 0.2, 1), top 1s cubic-bezier(0.4, 0, 0.2, 1)';
+      robot.style.left = `${centerX - 40}px`;
+      robot.style.top = `${centerY - 40}px`;
+      setTimeout(() => {
+        setTimeout(() => {
+          activatePortal(sectionId);
+        }, 300);
+      }, 1000);
+    }
+    
+    // Activate portal with section content
+    function activatePortal(sectionId) {
+      const section = sections.find(s => s.id === sectionId);
+      if (!section) return;
+      sectionTitle.textContent = section.name;
+      sectionContent.innerHTML = section.content;
+      portal.style.display = 'block';
+      setTimeout(() => {
+        portalBg.style.opacity = '1';
+      }, 0);
+      setTimeout(() => {
+        portalCircle.style.transform = 'translate(-50%, -50%) scale(30)';
+      }, 100);
+      setTimeout(() => {
+        contentContainer.style.opacity = '1';
+        contentContainer.style.pointerEvents = 'auto';
+      }, 1000);
+    }
+    
+    // Close portal and reset everything
+    function closePortal() {
+      contentContainer.style.opacity = '0';
+      contentContainer.style.pointerEvents = 'none';
+      setTimeout(() => {
+        portalCircle.style.transform = 'translate(-50%, -50%) scale(1)';
+      }, 100);
+      setTimeout(() => {
+        portalBg.style.opacity = '0';
+      }, 800);
+      setTimeout(() => {
+        portal.style.display = 'none';
+        resetEverything();
+      }, 1300);
+    }
+    
+    // Reset state and recreate bubbles
+    function resetEverything() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      targetBubble = null;
+      isRobotGrabbing = false;
+      robotHasGrabbed = false;
+      currentBubbleElement = null;
+      isDragging = false;
+      draggedElement = null;
+      robot.classList.remove('grabbing');
+      const carriedBubble = robot.querySelector('.carried-bubble');
+      if (carriedBubble) {
+        robot.removeChild(carriedBubble);
+      }
+      robot.style.transition = 'left 0.8s, top 0.8s';
+      robot.style.left = `${window.innerWidth - 100}px`;
+      robot.style.top = `${window.innerHeight - 100}px`;
+      createBubbles();
+    }
+    
+    // Handle window resize
+    function handleResize() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      drawBackground();
+      createBubbles();
+      if (!robotHasGrabbed) {
+        robot.style.left = `${window.innerWidth - 100}px`;
+        robot.style.top = `${window.innerHeight - 100}px`;
+      }
+    }
+    
+    // Draw the background gradient on the canvas
+    function drawBackground() {
+      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+      gradient.addColorStop(0, '#1a2a6c');
+      gradient.addColorStop(0.5, '#b21f1f');
+      gradient.addColorStop(1, '#fdbb2d');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    // Initialize the application
+    function init() {
+      drawBackground();
+      createBubbles();
+      initRobot();
+      setupDragging();
+      window.addEventListener('resize', handleResize);
+      backButton.addEventListener('click', closePortal);
+    }
+    
+    init();
+  </script>
+</body>
+</html>
