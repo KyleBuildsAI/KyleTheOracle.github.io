@@ -1,632 +1,1040 @@
+
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kyle Coleman - Portfolio</title>
-  <style>
-    /* Reset and basic styling */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      overflow: hidden;
-      font-family: Arial, sans-serif;
-    }
-    #canvas {
-      display: block;
-      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-    }
-    .bubble {
-      position: absolute;
-      width: 120px;
-      height: 120px;
-      border-radius: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: move;
-      box-shadow: 5px 5px 15px rgba(0,0,0,0.3);
-      z-index: 1;
-      user-select: none;
-    }
-    .bubble:hover {
-      box-shadow: 8px 8px 20px rgba(0,0,0,0.4);
-    }
-    .bubble-icon {
-      font-size: 40px;
-      margin-bottom: 10px;
-    }
-    .bubble-name {
-      font-weight: bold;
-      color: white;
-      text-align: center;
-    }
-    #robot {
-      position: absolute;
-      width: 80px;
-      height: 80px;
-      z-index: 2;
-      animation: float 2s ease-in-out infinite;
-    }
-    #robot.grabbing {
-      transform: scale(1.1);
-    }
-    .carried-bubble {
-      position: absolute;
-      transform: translate(-50%, -130%);
-      z-index: -1;
-    }
-    #portal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 100;
-      display: none;
-    }
-    .portal-bg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(49, 27, 146, 0.8);
-      opacity: 0;
-      transition: opacity 0.5s;
-    }
-    .portal-circle {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) scale(1);
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      background: radial-gradient(circle, white 0%, #4169e1 50%, #4b0082 100%);
-      box-shadow: 0 0 40px 10px rgba(138, 43, 226, 0.6);
-      transition: transform 1s ease-out;
-      pointer-events: none;
-    }
-    .content-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.5s;
-      pointer-events: none;
-    }
-    .content-card {
-      width: 90%;
-      max-width: 800px;
-      background-color: white;
-      border-radius: 12px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-      padding: 30px;
-      pointer-events: auto;
-    }
-    .section-title {
-      font-size: 32px;
-      font-weight: bold;
-      margin-bottom: 30px;
-      color: #333;
-      text-align: center;
-    }
-    .back-button {
-      display: block;
-      margin: 20px auto 0 auto;
-      padding: 10px 20px;
-      background-color: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 30px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    .back-button:hover {
-      background-color: #1d4ed8;
-    }
-    /* Content styles */
-    .content-image {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-    .content-image img {
-      width: 150px;
-      height: 150px;
-      border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-      display: inline-block;
-    }
-    .content-text {
-      width: 100%;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    .content-text ul {
-      margin-left: 20px;
-      margin-bottom: 15px;
-    }
-    .content-text ul li {
-      margin-bottom: 8px;
-    }
-    .content-text ul ul {
-      margin-top: 8px;
-    }
-    @keyframes float {
-      0% { transform: translateY(0px); }
-      50% { transform: translateY(-5px); }
-      100% { transform: translateY(0px); }
-    }
-  </style>
-</head>
-<body>
-  <canvas id="canvas"></canvas>
-  <div id="bubbles-container"></div>
-  <div id="robot">
-    <svg viewBox="0 0 100 100" width="100%" height="100%">
-      <circle cx="50" cy="50" r="50" fill="#FFD700" />
-      <circle cx="50" cy="50" r="30" fill="#333" />
-      <!-- Eyes -->
-      <circle cx="35" cy="45" r="8" fill="#FFA500" />
-      <circle cx="32" cy="42" r="3" fill="white" />
-      <circle cx="65" cy="45" r="8" fill="#FFA500" />
-      <circle cx="62" cy="42" r="3" fill="white" />
-      <!-- Arms -->
-      <rect x="15" y="40" width="15" height="20" fill="#DAA520" rx="5" class="arm left-arm" />
-      <rect x="70" y="40" width="15" height="20" fill="#DAA520" rx="5" class="arm right-arm" />
-    </svg>
-  </div>
-  
-  <div id="portal">
-    <div class="portal-bg" id="portal-bg"></div>
-    <div class="portal-circle" id="portal-circle"></div>
-    <div class="content-container" id="content-container">
-      <div class="content-card">
-        <h1 class="section-title" id="section-title"></h1>
-        <div id="section-content"></div>
-        <button class="back-button" id="back-button">Back to Portfolio</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // DOM elements
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const bubblesContainer = document.getElementById('bubbles-container');
-    const robot = document.getElementById('robot');
-    const portal = document.getElementById('portal');
-    const portalBg = document.getElementById('portal-bg');
-    const portalCircle = document.getElementById('portal-circle');
-    const contentContainer = document.getElementById('content-container');
-    const sectionTitle = document.getElementById('section-title');
-    const sectionContent = document.getElementById('section-content');
-    const backButton = document.getElementById('back-button');
-    
-    // Set canvas size
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    
-    // State variables
-    let targetBubble = null;
-    let isRobotGrabbing = false;
-    let robotHasGrabbed = false;
-    let currentBubbleElement = null;
-    let draggedElement = null;
-    let isDragging = false;
-    let dragOffsetX = 0;
-    let dragOffsetY = 0;
-    let clickStartTime = 0;
-    let clickStartX = 0;
-    let clickStartY = 0;
-    let bubblePositions = [];
-    let animationId = null;
-    
-    // Portfolio sections with updated Imgur URLs
-    const sections = [
-      {
-        id: 'about',
-        name: 'About Kyle',
-        icon: '👨‍💻',
-        color: '#4CAF50',
-        content: `
-          <div class="content-image">
-            <img src="https://i.imgur.com/Q49K5Ju.jpg" alt="Kyle Coleman" />
-          </div>
-          <div class="content-text">
-            <ul>
-              <li><strong>Education:</strong> Sacramento State alumnus.</li>
-              <li><strong>Background:</strong> AI Engineer, Developer, and Data Analyst with a solid foundation in IT and MIS.</li>
-              <li><strong>Attributes:</strong> Noted for strong visual, spatial, and creative thinking skills that support innovative solutions.</li>
-              <li><strong>Mission:</strong> Passionate about AI and committed to advancing technology to improve humanity.</li>
-            </ul>
-          </div>
-        `
-      },
-      {
-        id: 'prediction',
-        name: 'Prediction Models',
-        icon: '📈',
-        color: '#2196F3',
-        content: `
-          <div class="content-image">
-            <img src="https://i.imgur.com/EFTvI5Y.jpg" alt="Prediction Models" />
-          </div>
-          <div class="content-text">
-            <ul>
-              <li><strong>Overview:</strong> Advanced, multi-stage prediction models.</li>
-              <li><strong>Process:</strong> Uses AI agents to collect and refine data with rigorous verification.</li>
-              <li><strong>Quality:</strong> Meticulous checks eliminate assumptions and reduce hallucinations.</li>
-              <li><strong>Accuracy:</strong> Achieves an impressive 87% prediction accuracy!</li>
-              <li><strong>Outcome:</strong> Drives data-driven decisions with actionable insights.</li>
-            </ul>
-          </div>
-        `
-      },
-      {
-        id: 'chatbots',
-        name: 'AI Chatbots',
-        icon: '🤖',
-        color: '#9C27B0',
-        content: `
-          <div class="content-image">
-            <img src="https://i.imgur.com/vZx1Ags.jpg" alt="AI Chatbots" />
-          </div>
-          <div class="content-text">
-            <ul>
-              <li><strong>Project:</strong> Customer service chatbot that auto-responds to queries.</li>
-              <li><strong>Tech:</strong> Custom programming for robust, efficient workflows.</li>
-              <li><strong>Performance:</strong> Over 80% query resolution success with a 300% efficiency boost.</li>
-              <li><strong>Impact:</strong> Provides responsive and effective support that elevates customer engagement.</li>
-            </ul>
-          </div>
-        `
-      },
-      {
-        id: 'future',
-        name: 'Future Projects',
-        icon: '🚀',
-        color: '#FF5722',
-        content: `
-          <div class="content-image">
-            <img src="https://i.imgur.com/f4IUvKu.jpg" alt="Future Projects" />
-          </div>
-          <div class="content-text">
-            <ul>
-              <li><strong>Focus:</strong> Continuous innovation and exploration of emerging AI trends.</li>
-              <li>
-                <strong>AI Swarms:</strong>
-                <ul>
-                  <li><strong>Concept:</strong> Developing AI swarms—coordinated agents working together to tackle complex challenges.</li>
-                  <li><strong>Capabilities:</strong> Each agent features adaptive self-checks, modular responsiveness, and optimized resource management.</li>
-                </ul>
-              </li>
-              <li><strong>Vision:</strong> At the forefront of next-generation AI, Kyle is dedicated to transforming business operations through advanced automation and strategic insights, driving progress and improving humanity.</li>
-            </ul>
-          </div>
-        `
-      },
-      {
-        id: 'contact',
-        name: 'Contact',
-        icon: '📧',
-        color: '#E91E63',
-        content: `
-          <div class="content-image">
-            <img src="https://i.imgur.com/6sPRlcL.jpg" alt="Contact" />
-          </div>
-          <div class="content-text">
-            <ul>
-              <li><strong>Email:</strong> KyleDColeman1997@gmail.com</li>
-              <li><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/KyleDColeman/" target="_blank">https://www.linkedin.com/in/KyleDColeman/</a></li>
-              <li><strong>GitHub:</strong> <a href="https://github.com/KyleTheOracle" target="_blank">https://github.com/KyleTheOracle</a></li>
-            </ul>
-          </div>
-        `
-      }
-    ];
-    
-    // Initialize bubbles
-    function createBubbles() {
-      bubblesContainer.innerHTML = '';
-      bubblePositions = [];
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      const radius = Math.min(window.innerWidth, window.innerHeight) * 0.3;
-      
-      sections.forEach((section, i) => {
-        const angle = (i / sections.length) * Math.PI * 2;
-        const randomOffset = Math.random() * 30 - 15;
-        const x = centerX + Math.cos(angle) * (radius + randomOffset);
-        const y = centerY + Math.sin(angle) * (radius + randomOffset);
-        const bubble = document.createElement('div');
-        bubble.className = 'bubble';
-        bubble.id = `bubble-${section.id}`;
-        bubble.style.left = `${x - 60}px`;
-        bubble.style.top = `${y - 60}px`;
-        bubble.style.backgroundColor = section.color;
-        bubble.innerHTML = `
-          <div class="bubble-icon">${section.icon}</div>
-          <div class="bubble-name">${section.name}</div>
-        `;
-        bubblePositions.push({
-          element: bubble,
-          id: section.id,
-          x: x - 60,
-          y: y - 60,
-          vx: Math.random() * 0.3 - 0.15,
-          vy: Math.random() * 0.3 - 0.15
-        });
-        bubble.addEventListener('dblclick', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          this.style.opacity = '0';
-          currentBubbleElement = this;
-          activatePortal(section.id);
-        });
-        bubblesContainer.appendChild(bubble);
-      });
-      if (!animationId) {
-        startFloatingAnimation();
-      }
-    }
-    
-    // Initialize robot position
-    function initRobot() {
-      robot.style.transition = 'left 0.5s, top 0.5s';
-      robot.style.left = `${window.innerWidth - 100}px`;
-      robot.style.top = `${window.innerHeight - 100}px`;
-    }
-    
-    // Start floating animation for bubbles
-    function startFloatingAnimation() {
-      function animate() {
-        bubblePositions.forEach(pos => {
-          if (isDragging && draggedElement && draggedElement.id === `bubble-${pos.id}`) return;
-          if (robotHasGrabbed && currentBubbleElement && currentBubbleElement.id === `bubble-${pos.id}`) return;
-          pos.x += pos.vx;
-          pos.y += pos.vy;
-          pos.vx *= 0.99;
-          pos.vy *= 0.99;
-          if (pos.x < 0) {
-            pos.x = 0;
-            pos.vx = Math.abs(pos.vx) * 0.8;
-          } else if (pos.x > window.innerWidth - 120) {
-            pos.x = window.innerWidth - 120;
-            pos.vx = -Math.abs(pos.vx) * 0.8;
-          }
-          if (pos.y < 0) {
-            pos.y = 0;
-            pos.vy = Math.abs(pos.vy) * 0.8;
-          } else if (pos.y > window.innerHeight - 120) {
-            pos.y = window.innerHeight - 120;
-            pos.vy = -Math.abs(pos.vy) * 0.8;
-          }
-          if (Math.abs(pos.vx) < 0.05 && Math.abs(pos.vy) < 0.05) {
-            if (Math.random() < 0.01) {
-              pos.vx += (Math.random() - 0.5) * 0.2;
-              pos.vy += (Math.random() - 0.5) * 0.2;
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>KYLE COLEMAN | AI Solutions Architect | Data Analyst | Developer</title>
+<script src="assets/script_217692cc.js"></script>
+<link href="assets/style_4d5ecc1b.css" rel="stylesheet"/>
+<script src="assets/script_b135c7eb.js"></script>
+<script src="assets/script_fb66f4fc.js"></script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Poppins:wght@300;400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow-x: hidden;
+            font-family: 'Poppins', sans-serif;
+            background-color: #0a0a12;
+            color: #f1f1f3;
+        }
+        
+        .tech-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .hero-section {
+            height: 100vh;
+            position: relative;
+        }
+        
+        .particle-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+        }
+        
+        .gradient-text {
+            background: linear-gradient(90deg, #00f0ff, #5773ff, #ff007a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .gradient-border {
+            position: relative;
+        }
+        
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            z-index: -1;
+            background: linear-gradient(90deg, #00f0ff, #5773ff, #ff007a);
+            border-radius: inherit;
+            padding: 2px;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+        }
+        
+        .floating {
+            animation: floating 8s ease-in-out infinite;
+        }
+        
+        .floating-2 {
+            animation: floating 6s ease-in-out infinite 2s;
+        }
+        
+        .floating-3 {
+            animation: floating 7s ease-in-out infinite 1s;
+        }
+        
+        @keyframes floating {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-30px) rotate(5deg); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+        
+        .holographic {
+            background: linear-gradient(135deg, rgba(0,240,255,0.1) 0%, rgba(87,115,255,0.1) 50%, rgba(255,0,122,0.1) 100%);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .neon-glow {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.7);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.4); }
+            70% { box-shadow: 0 0 0 15px rgba(0, 240, 255, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 240, 255, 0); }
+        }
+        
+        .rotate-x {
+            animation: rotate-x 20s infinite linear;
+            transform-style: preserve-3d;
+        }
+        
+        @keyframes rotate-x {
+            0% { transform: rotateX(0deg); }
+            100% { transform: rotateX(360deg); }
+        }
+        
+        .space-helmet {
+            perspective: 1000px;
+        }
+        
+        .helmet-visor {
+            background: linear-gradient(45deg, rgba(0,240,255,0.2), rgba(87,115,255,0.4));
+            box-shadow: inset 0 0 50px rgba(0,240,255,0.5);
+            border-radius: 50%;
+            filter: blur(0.5px);
+        }
+        
+        .nav-link {
+            position: relative;
+        }
+        
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #00f0ff, #5773ff, #ff007a);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        
+        .scroll-down {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0) translateX(-50%);
             }
-          }
-          pos.element.style.left = `${pos.x}px`;
-          pos.element.style.top = `${pos.y}px`;
-        });
-        animationId = requestAnimationFrame(animate);
-      }
-      animate();
-    }
-    
-    // Setup dragging functionality
-    function setupDragging() {
-      document.addEventListener('mousedown', function(e) {
-        if (robotHasGrabbed) return;
-        const bubble = e.target.closest('.bubble');
-        if (!bubble) return;
-        e.preventDefault();
-        clickStartTime = Date.now();
-        clickStartX = e.clientX;
-        clickStartY = e.clientY;
-        const rect = bubble.getBoundingClientRect();
-        dragOffsetX = e.clientX - rect.left;
-        dragOffsetY = e.clientY - rect.top;
-        isDragging = true;
-        draggedElement = bubble;
-        draggedElement.style.zIndex = 10;
-      });
-      
-      document.addEventListener('mousemove', function(e) {
-        if (!isDragging || !draggedElement) return;
-        const x = e.clientX - dragOffsetX;
-        const y = e.clientY - dragOffsetY;
-        draggedElement.style.left = `${x}px`;
-        draggedElement.style.top = `${y}px`;
-        const bubbleId = draggedElement.id.replace('bubble-', '');
-        const pos = bubblePositions.find(p => p.id === bubbleId);
-        if (pos) {
-          pos.x = x;
-          pos.y = y;
-          pos.vx = 0;
-          pos.vy = 0;
+            40% {
+                transform: translateY(-20px) translateX(-50%);
+            }
+            60% {
+                transform: translateY(-10px) translateX(-50%);
+            }
         }
-      });
-      
-      document.addEventListener('mouseup', function(e) {
-        if (!isDragging || !draggedElement) return;
-        const duration = Date.now() - clickStartTime;
-        const distance = Math.sqrt(Math.pow(e.clientX - clickStartX, 2) + Math.pow(e.clientY - clickStartY, 2));
-        if (duration < 200 && distance < 5) {
-          const bubbleId = draggedElement.id.replace('bubble-', '');
-          const section = sections.find(s => s.id === bubbleId);
-          if (section) {
-            sendRobotTo(draggedElement, section);
-          }
-        } else {
-          const bubbleId = draggedElement.id.replace('bubble-', '');
-          const pos = bubblePositions.find(p => p.id === bubbleId);
-          if (pos) {
-            pos.vx = (Math.random() - 0.5) * 2;
-            pos.vy = (Math.random() - 0.5) * 2;
-          }
+        
+        .feature-panel {
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.6s ease-out;
         }
-        draggedElement.style.zIndex = 1;
-        isDragging = false;
-        draggedElement = null;
-      });
-    }
-    
-    // Send robot to grab a bubble
-    function sendRobotTo(bubbleElement, section) {
-      if (!bubbleElement) return;
-      const rect = bubbleElement.getBoundingClientRect();
-      const bubbleX = rect.left + rect.width / 2;
-      const bubbleY = rect.top + rect.height / 2;
-      robot.style.transition = 'left 0.5s, top 0.5s';
-      robot.style.left = `${bubbleX - 40}px`;
-      robot.style.top = `${bubbleY - 40}px`;
-      setTimeout(() => {
-        robot.classList.add('grabbing');
-        const carriedBubble = document.createElement('div');
-        carriedBubble.className = 'carried-bubble';
-        carriedBubble.style.width = '80px';
-        carriedBubble.style.height = '80px';
-        carriedBubble.style.backgroundColor = section.color;
-        carriedBubble.style.borderRadius = '15px';
-        carriedBubble.innerHTML = `<div class="bubble-icon" style="font-size: 30px">${section.icon}</div>`;
-        robot.appendChild(carriedBubble);
-        bubbleElement.style.opacity = '0';
-        currentBubbleElement = bubbleElement;
-        targetBubble = section.id;
-        isRobotGrabbing = true;
-        robotHasGrabbed = true;
-        moveToCenter(section.id);
-      }, 500);
-    }
-    
-    // Move robot to center and open portal
-    function moveToCenter(sectionId) {
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      robot.style.transition = 'left 1s cubic-bezier(0.4, 0, 0.2, 1), top 1s cubic-bezier(0.4, 0, 0.2, 1)';
-      robot.style.left = `${centerX - 40}px`;
-      robot.style.top = `${centerY - 40}px`;
-      setTimeout(() => {
-        setTimeout(() => {
-          activatePortal(sectionId);
-        }, 300);
-      }, 1000);
-    }
-    
-    // Activate portal with section content
-    function activatePortal(sectionId) {
-      const section = sections.find(s => s.id === sectionId);
-      if (!section) return;
-      sectionTitle.textContent = section.name;
-      sectionContent.innerHTML = section.content;
-      portal.style.display = 'block';
-      setTimeout(() => {
-        portalBg.style.opacity = '1';
-      }, 0);
-      setTimeout(() => {
-        portalCircle.style.transform = 'translate(-50%, -50%) scale(30)';
-      }, 100);
-      setTimeout(() => {
-        contentContainer.style.opacity = '1';
-        contentContainer.style.pointerEvents = 'auto';
-      }, 1000);
-    }
-    
-    // Close portal and reset everything
-    function closePortal() {
-      contentContainer.style.opacity = '0';
-      contentContainer.style.pointerEvents = 'none';
-      setTimeout(() => {
-        portalCircle.style.transform = 'translate(-50%, -50%) scale(1)';
-      }, 100);
-      setTimeout(() => {
-        portalBg.style.opacity = '0';
-      }, 800);
-      setTimeout(() => {
-        portal.style.display = 'none';
-        resetEverything();
-      }, 1300);
-    }
-    
-    // Reset state and recreate bubbles
-    function resetEverything() {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-      }
-      targetBubble = null;
-      isRobotGrabbing = false;
-      robotHasGrabbed = false;
-      currentBubbleElement = null;
-      isDragging = false;
-      draggedElement = null;
-      robot.classList.remove('grabbing');
-      const carriedBubble = robot.querySelector('.carried-bubble');
-      if (carriedBubble) {
-        robot.removeChild(carriedBubble);
-      }
-      robot.style.transition = 'left 0.8s, top 0.8s';
-      robot.style.left = `${window.innerWidth - 100}px`;
-      robot.style.top = `${window.innerHeight - 100}px`;
-      createBubbles();
-    }
-    
-    // Handle window resize
-    function handleResize() {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-      }
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      drawBackground();
-      createBubbles();
-      if (!robotHasGrabbed) {
-        robot.style.left = `${window.innerWidth - 100}px`;
-        robot.style.top = `${window.innerHeight - 100}px`;
-      }
-    }
-    
-    // Draw the background gradient on the canvas
-    function drawBackground() {
-      const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      gradient.addColorStop(0, '#1a2a6c');
-      gradient.addColorStop(0.5, '#b21f1f');
-      gradient.addColorStop(1, '#fdbb2d');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    
-    // Initialize the application
-    function init() {
-      drawBackground();
-      createBubbles();
-      initRobot();
-      setupDragging();
-      window.addEventListener('resize', handleResize);
-      backButton.addEventListener('click', closePortal);
-    }
-    
-    init();
-  </script>
+        
+        .feature-panel.visible {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .hologram-effect {
+            position: relative;
+        }
+        
+        .hologram-effect::before {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            background: linear-gradient(to bottom, rgba(0,240,255,0.3), transparent);
+            transform: perspective(500px) rotateX(60deg) scaleY(0.8);
+            filter: blur(15px);
+            z-index: -1;
+        }
+        
+        .scanline {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .scanline::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                transparent 0%,
+                rgba(0, 240, 255, 0.03) 50%,
+                transparent 100%
+            );
+            animation: scanline 5s linear infinite;
+            pointer-events: none;
+        }
+        
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+        
+        /* Floating 3D Shapes */
+        .floating-cube {
+            animation: floating 8s ease-in-out infinite, rotate-x 20s infinite linear;
+            transform-style: preserve-3d;
+        }
+        
+        .floating-pyramid {
+            animation: floating 7s ease-in-out infinite 1s, rotate-y 25s infinite linear reverse;
+            transform-style: preserve-3d;
+        }
+        
+        .floating-torus {
+            animation: floating 9s ease-in-out infinite 2s, rotate-x 30s infinite linear reverse;
+            transform-style: preserve-3d;
+        }
+        
+        @keyframes rotate-y {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(360deg); }
+        }
+        
+        .noise::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+            z-index: -1;
+        }
+    </style>
+<script>
+            window.load_data_from_csv = (filename) => {
+                // Implementation needed when code is downloaded
+            };
+
+            window.save_data_to_csv = (filename, data) => {
+                // Implementation needed when code is downloaded
+            };
+
+            window.call_llm = (system_prompt, user_messages, json_fields) => {
+                // Implementation needed when code is downloaded
+            };
+        </script></head>
+<body>
+<!-- Background Animation -->
+<div class="particle-bg" id="vanta-bg"></div>
+<!-- Navigation -->
+<nav class="fixed w-full z-50 bg-black bg-opacity-60 backdrop-filter backdrop-blur-lg border-b border-gray-800">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="flex justify-between h-20 items-center">
+<div class="flex-shrink-0 flex items-center">
+<span class="text-2xl font-bold gradient-text tech-font">KYLE COLEMAN</span>
+</div>
+</div>
+</div>
+</nav>
+<!-- Hero Section with 3D Model -->
+<section class="hero-section flex items-center justify-center relative overflow-hidden px-4">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+<div class="text-center lg:text-left">
+<div class="relative inline-block mb-8">
+<div class="absolute -inset-1 bg-gradient-to-r from-blue-400 to-purple-600 rounded-xl blur opacity-75"></div>
+<span class="relative px-4 py-2 bg-black rounded-lg text-sm font-medium tech-font">
+                        ADVANCING AI FOR HUMANITY
+                    </span>
+</div>
+<h1 class="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight tech-font">
+<span class="gradient-text">AI Solutions Architect</span>
+</h1>
+<p class="text-xl text-gray-300 max-w-2xl mb-10">
+                    As a highly motivated AI Solutions Architect with over a decade of IT experience, I architect, implement, and optimize intelligent systems by expertly fusing deep infrastructure knowledge with strategic solution design and data-driven insights to deliver impactful outcomes.
+                </p>
+</div>
+<!-- 3D Holographic Display -->
+<div class="relative flex items-center justify-center h-96 lg:h-auto">
+<div class="absolute w-64 h-64 md:w-80 md:h-80 lg:w-96 lg:h-96">
+<div class="floating-torus h-full w-full">
+<!-- Three.js will render here -->
+<canvas class="h-full w-full" id="torusCanvas"></canvas>
+</div>
+</div>
+<div class="holographic h-64 w-64 md:h-80 md:w-80 lg:h-96 lg:w-96 rounded-full opacity-90 relative">
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="helmet-visor h-3/4 w-3/4 flex items-center justify-center">
+<div class="text-center p-6">
+<h3 class="text-2xl font-bold mb-2 gradient-text tech-font">KYLE COLEMAN</h3>
+<p class="text-xs text-gray-300">AI SOLUTIONS ARCHITECT</p>
+<div class="mt-4 h-1 w-16 mx-auto bg-gradient-to-r from-blue-400 to-purple-600"></div>
+</div>
+</div>
+</div>
+<div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-1/2 h-2 bg-blue-400 rounded-full blur-md opacity-60"></div>
+</div>
+<!-- Floating 3D Shapes -->
+<div class="absolute -left-10 top-1/4 w-16 h-16">
+<div class="floating-cube h-full w-full">
+<canvas class="h-full w-full" id="cubeCanvas"></canvas>
+</div>
+</div>
+<div class="absolute -right-10 bottom-1/3 w-20 h-20">
+<div class="floating-pyramid h-full w-full">
+<canvas class="h-full w-full" id="pyramidCanvas"></canvas>
+</div>
+</div>
+</div>
+<!-- Scroll Down Indicator -->
+<div class="scroll-down lg:hidden">
+<a class="text-blue-400 hover:text-purple-400 transition-colors duration-300" href="#features">
+<i class="fas fa-chevron-down text-2xl"></i>
+</a>
+</div>
+</div>
+</section>
+<!-- Tech Features Section -->
+<section class="py-20 relative overflow-hidden px-4" id="features">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-bold mb-4 tech-font">
+<span class="gradient-text">Technological</span> Capabilities
+                </h2>
+<p class="text-xl text-gray-300 max-w-4xl mx-auto">
+                    I leverage my strong visual, spatial, and creative thinking skills to develop innovative AI solutions and data-driven strategies.
+                </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Feature 1 -->
+<div class="feature-panel holographic p-8 rounded-2xl transition-all duration-700 hover:transform hover:scale-105">
+<div class="relative">
+<div class="absolute -left-2 -top-2 w-12 h-12 bg-blue-500 rounded-full opacity-20 blur-sm"></div>
+<div class="relative flex items-center">
+<div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-4">
+<i class="fas fa-brain text-xl"></i>
+</div>
+<h3 class="text-2xl font-bold gradient-text tech-font">AI / Machine Learning</h3>
+</div>
+</div>
+<p class="text-gray-300 mt-6 mb-6">
+                                                        Advanced prompt engineering, chatbot development (ChatGPT, Gemini, Llama, Claude), and proficiency in Visual Studio Code, Jupyter Notebooks, PyCharm, and Git.
+                                                    </p>
+<div class="relative h-40 mt-6 rounded-xl overflow-hidden">
+<canvas class="w-full h-full bg-black/30" id="aiMlCanvas"></canvas>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-20 h-20 border-2 border-blue-400/50 rounded-full animate-ping opacity-30"></div>
+</div>
+</div>
+</div>
+<div class="feature-panel holographic p-8 rounded-2xl transition-all duration-700 delay-100 hover:transform hover:scale-105">
+<div class="relative">
+<div class="absolute -left-2 -top-2 w-12 h-12 bg-purple-500 rounded-full opacity-20 blur-sm"></div>
+<div class="relative flex items-center">
+<div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mr-4">
+<i class="fas fa-chart-line text-xl"></i>
+</div>
+<h3 class="text-2xl font-bold gradient-text tech-font">Data Analysis &amp; Querying</h3>
+</div>
+</div>
+<p class="text-gray-300 mt-6 mb-6">
+                                                        Expertise in Python and SQL (Pandas, NumPy) for data cleaning, manipulation, and creating impactful visualizations with tools like Tableau and Excel.
+                                                    </p>
+<div class="relative h-40 mt-6 rounded-xl overflow-hidden">
+<canvas class="w-full h-full bg-black/30" id="dataAnalysisCanvas"></canvas>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-20 h-20 border-2 border-purple-400/50 rounded-full animate-ping opacity-30"></div>
+</div>
+</div>
+</div>
+<div class="feature-panel holographic p-8 rounded-2xl transition-all duration-700 delay-200 hover:transform hover:scale-105">
+<div class="relative">
+<div class="absolute -left-2 -top-2 w-12 h-12 bg-pink-500 rounded-full opacity-20 blur-sm"></div>
+<div class="relative flex items-center">
+<div class="w-12 h-12 bg-gradient-to-br from-pink-500 to-blue-600 rounded-lg flex items-center justify-center mr-4">
+<i class="fas fa-cloud text-xl"></i>
+</div>
+<h3 class="text-2xl font-bold gradient-text tech-font">Cloud &amp; Infrastructure</h3>
+</div>
+</div>
+<p class="text-gray-300 mt-6 mb-6">
+                                                        Proficient in leveraging Amazon Web Services (AWS), Google Cloud Platform (GCP), and the Snowflake AI Data Cloud to build and deploy scalable solutions.
+                                                    </p>
+<div class="relative h-40 mt-6 rounded-xl overflow-hidden">
+<canvas class="w-full h-full bg-black/30" id="cloudInfraCanvas"></canvas>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-20 h-20 border-2 border-pink-400/50 rounded-full animate-ping opacity-30"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 3D Showcase Section -->
+<section class="py-20 relative overflow-hidden px-4" id="portfolio">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="text-center mb-16">
+<h2 class="text-3xl md:text-5xl font-bold mb-4 tech-font">
+<span class="gradient-text">My Project</span> Showcase
+                                                </h2>
+<p class="text-xl text-gray-300 max-w-4xl mx-auto">
+                                                    My portfolio of projects demonstrating innovative AI solutions and impactful results.
+                                                </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Project 1 -->
+<div class="feature-panel holographic rounded-2xl overflow-hidden transition-all duration-700 delay-75 hover:transform hover:scale-105">
+<div class="relative h-64">
+<canvas class="absolute inset-0 w-full h-full bg-gray-900" id="project1Canvas"></canvas>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-6">
+<h3 class="text-2xl font-bold mb-1">Customer Service AI Chatbot</h3>
+<span class="text-sm text-blue-400">LLM-Powered Customer Support</span>
+</div>
+</div>
+<div class="p-6">
+<p class="text-gray-300 mb-4">Redesigned customer service by cutting case turnaround from weeks to 30 minutes, achieving an 80%+ success rate and a 300% efficiency boost.</p>
+<button class="text-blue-400 font-medium flex items-center group">
+<span>Explore Project</span>
+<i class="fas fa-arrow-right ml-2 group-hover:ml-3 transition-all duration-300"></i>
+</button>
+</div>
+</div>
+<!-- Project 2 -->
+<div class="feature-panel holographic rounded-2xl overflow-hidden transition-all duration-700 delay-150 hover:transform hover:scale-105">
+<div class="relative h-64">
+<canvas class="absolute inset-0 w-full h-full bg-gray-900" id="project2Canvas"></canvas>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-6">
+<h3 class="text-2xl font-bold mb-1">Advanced Prediction Models</h3>
+<span class="text-sm text-purple-400">AI-Driven Data Insights</span>
+</div>
+</div>
+<div class="p-6">
+<p class="text-gray-300 mb-4">Developed multi-stage prediction models using AI agents for data collection and verification, achieving 87% accuracy and driving data-driven decisions.</p>
+<button class="text-purple-400 font-medium flex items-center group">
+<span>Explore Project</span>
+<i class="fas fa-arrow-right ml-2 group-hover:ml-3 transition-all duration-300"></i>
+</button>
+</div>
+</div>
+<!-- Project 3 -->
+<div class="feature-panel holographic rounded-2xl overflow-hidden transition-all duration-700 delay-300 hover:transform hover:scale-105">
+<div class="relative h-64">
+<canvas class="absolute inset-0 w-full h-full bg-gray-900" id="project3Canvas"></canvas>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-6">
+<h3 class="text-2xl font-bold mb-1">AI Swarms Concept</h3>
+<span class="text-sm text-pink-400">Next-Generation AI Collaboration</span>
+</div>
+</div>
+<div class="p-6">
+<p class="text-gray-300 mb-4">Developing AI swarms—coordinated agents tackling complex challenges, featuring adaptive self-checks, modular responsiveness, and optimized resource management.</p>
+<button class="text-pink-400 font-medium flex items-center group">
+<span>Explore Project</span>
+<i class="fas fa-arrow-right ml-2 group-hover:ml-3 transition-all duration-300"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- 3D Tech Visualization -->
+<div class="mt-20 relative h-96 rounded-3xl overflow-hidden hologram-effect scanline noise">
+<canvas class="absolute inset-0 w-full h-full" id="techVizCanvas"></canvas>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="text-center p-8 max-w-2xl">
+<h3 class="text-3xl md:text-4xl font-bold mb-4 gradient-text tech-font">Tech Spectrum Analysis</h3>
+<p class="text-gray-300 mb-6">Real-time visualization of my technology stack and capabilities across multiple dimensions.</p>
+<div class="flex justify-center gap-4">
+<button class="px-6 py-2 rounded-full text-sm font-medium bg-blue-500/20 border border-blue-400/50 hover:bg-blue-500/30">AI / ML</button>
+<button class="px-6 py-2 rounded-full text-sm font-medium bg-purple-500/20 border border-purple-400/50 hover:bg-purple-500/30">Data Analysis</button>
+<button class="px-6 py-2 rounded-full text-sm font-medium bg-pink-500/20 border border-pink-400/50 hover:bg-pink-500/30">Cloud &amp; Infra</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 3D Performance Stats -->
+<section class="py-20 relative overflow-hidden px-4">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="holographic rounded-3xl p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+<div>
+<h2 class="text-3xl md:text-5xl font-bold mb-6 tech-font">
+<span class="gradient-text">Performance</span> Metrics
+                                                    </h2>
+<p class="text-xl text-gray-300 mb-8">
+                                                        My solutions deliver measurable results across all key performance indicators.
+                                                    </p>
+<div class="grid grid-cols-2 gap-6">
+<div>
+<div class="text-4xl font-bold gradient-text mb-2 tech-font">15%</div>
+<p class="text-gray-400">Increase In Sales</p>
+</div>
+<div>
+<div class="text-4xl font-bold gradient-text mb-2 tech-font">300%</div>
+<p class="text-gray-400">Process Efficiency Boost</p>
+</div>
+<div>
+<div class="text-4xl font-bold gradient-text mb-2 tech-font">50%</div>
+<p class="text-gray-400">Task Time Reduction</p>
+</div>
+<div>
+<div class="text-4xl font-bold gradient-text mb-2 tech-font">95%</div>
+<p class="text-gray-400">Prediction Model Accuracy</p>
+</div>
+</div>
+</div>
+<div class="h-64 md:h-96 relative">
+<canvas class="absolute inset-0 w-full h-full" id="statsCanvas"></canvas>
+</div>
+</div>
+</div>
+</section>
+<!-- Contact Section with 3D Form -->
+<section class="py-20 relative overflow-hidden px-4" id="contact">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-1 gap-12">
+<div class="p-8 bg-black/70 backdrop-filter backdrop-blur-lg rounded-2xl border border-gray-700 shadow-xl">
+<h3 class="text-xl font-bold mb-2 gradient-text tech-font">Connect With Me</h3>
+<p class="text-gray-300 mb-4">I'm available across all major platforms and networks.</p>
+<div class="flex space-x-4">
+<a class="w-10 h-10 bg-gray-800 hover:bg-blue-400 rounded-full flex items-center justify-center transition-all duration-300" href="https://www.linkedin.com/in/kyledcoleman/" rel="noopener noreferrer" target="_blank">
+<i class="fab fa-linkedin"></i>
+</a>
+<a class="w-10 h-10 bg-gray-800 hover:bg-green-400 rounded-full flex items-center justify-center transition-all duration-300" href="mailto:KyleDColeman1997@gmail.com">
+<i class="fas fa-envelope"></i>
+</a>
+<a class="w-10 h-10 bg-gray-800 hover:bg-purple-400 rounded-full flex items-center justify-center transition-all duration-300" href="https://github.com/KyleTheOracle" rel="noopener noreferrer" target="_blank">
+<i class="fab fa-github"></i>
+</a>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="py-12 border-t border-gray-800 relative overflow-hidden px-4">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div>
+<h4 class="text-xl font-bold gradient-text tech-font mb-4">KYLE COLEMAN</h4>
+<p class="text-gray-400 mb-6">Passionate about AI and committed to advancing technology to improve humanity.</p>
+<div class="flex space-x-4">
+<a class="text-gray-400 hover:text-blue-400 transition-colors duration-300" href="https://www.linkedin.com/in/kyledcoleman/" rel="noopener noreferrer" target="_blank">
+<i class="fab fa-linkedin"></i>
+</a>
+<a class="text-gray-400 hover:text-green-400 transition-colors duration-300" href="mailto:KyleDColeman1997@gmail.com">
+<i class="fas fa-envelope"></i>
+</a>
+<a class="text-gray-400 hover:text-purple-400 transition-colors duration-300" href="https://github.com/KyleTheOracle" rel="noopener noreferrer" target="_blank">
+<i class="fab fa-github"></i>
+</a>
+</div>
+</div>
+<div>
+<h5 class="text-lg font-bold text-white mb-4">Services</h5>
+<ul class="space-y-2">
+<li><span class="text-gray-400">AI Solutions Architecture</span></li>
+<li><span class="text-gray-400">Chatbot Development</span></li>
+<li><span class="text-gray-400">Prediction Modeling</span></li>
+<li><span class="text-gray-400">Data Analysis &amp; Visualization</span></li>
+<li><span class="text-gray-400">IT Consulting &amp; Optimization</span></li>
+</ul>
+</div>
+</div>
+<div class="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+<p class="text-gray-500 text-sm mb-4 md:mb-0">© 2025 KYLE COLEMAN. All rights reserved.</p>
+<div class="flex space-x-6">
+</div>
+</div>
+</div>
+<!-- Floating 3D Sphere -->
+<div class="absolute -bottom-20 -right-20 w-40 h-40">
+<canvas class="w-full h-full" id="footerSphereCanvas"></canvas>
+</div>
+</footer>
+<script>
+                                        document.addEventListener('DOMContentLoaded', function() {
+                                            // Initialize Vanta.js background
+                                            VANTA.GLOBE({
+                                                el: "#vanta-bg",
+                                                threejs: THREE, 
+                                                mouseControls: true,
+                                                touchControls: true,
+                                                gyroControls: false,
+                                                minHeight: 200.00,
+                                                minWidth: 200.00,
+                                                scale: 1.00,
+                                                scaleMobile: 1.00,
+                                                color: 0x5773ff,
+                                                backgroundColor: 0x0a0a12,
+                                                size: 0.8
+                                            });
+        
+                                            let project1Points, p1Positions; // For Grid Points animation
+                                            let project2Group;             // For Cityscape animation
+                                            let project3Group;             // For Random Lines animation
+
+                                            // Initialize Three.js 3D models
+                                            // Torus in Hero Section
+                                            const torusCanvas = document.getElementById('torusCanvas');
+                                            const torusScene = new THREE.Scene();
+                                            const torusCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const torusRenderer = new THREE.WebGLRenderer({ 
+                                                canvas: torusCanvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+            
+                                            const torusGeometry = new THREE.TorusGeometry(1, 0.4, 16, 100);
+                                            const torusMaterial = new THREE.MeshBasicMaterial({ 
+                                                color: 0x5773ff,
+                                                wireframe: true,
+                                                transparent: true,
+                                                opacity: 0.8
+                                            });
+                                            const torus = new THREE.Mesh(torusGeometry, torusMaterial);
+                                            torusScene.add(torus);
+                                            torusCamera.position.z = 3;
+            
+                                            // Cube in Hero Section
+                                            const cubeCanvas = document.getElementById('cubeCanvas');
+                                            const cubeScene = new THREE.Scene();
+                                            const cubeCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const cubeRenderer = new THREE.WebGLRenderer({ 
+                                                canvas: cubeCanvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+            
+                                            const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+                                            const cubeMaterial = new THREE.MeshBasicMaterial({ 
+                                                color: 0xff007a,
+                                                wireframe: true,
+                                                transparent: true,
+                                                opacity: 0.6
+                                            });
+                                            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+                                            cubeScene.add(cube);
+                                            cubeCamera.position.z = 3;
+            
+                                            // Pyramid in Hero Section
+                                            const pyramidCanvas = document.getElementById('pyramidCanvas');
+                                            const pyramidScene = new THREE.Scene();
+                                            const pyramidCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const pyramidRenderer = new THREE.WebGLRenderer({ 
+                                                canvas: pyramidCanvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+            
+                                            const pyramidGeometry = new THREE.ConeGeometry(0.8, 1.5, 4);
+                                            const pyramidMaterial = new THREE.MeshBasicMaterial({ 
+                                                color: 0x00f0ff,
+                                                wireframe: true,
+                                                transparent: true,
+                                                opacity: 0.6
+                                            });
+                                            const pyramid = new THREE.Mesh(pyramidGeometry, pyramidMaterial);
+                                            pyramid.rotation.y = Math.PI / 4;
+                                            pyramidScene.add(pyramid);
+                                            pyramidCamera.position.z = 3;
+
+                                            // AI ML Canvas
+                                            const aiMlCanvas = document.getElementById('aiMlCanvas');
+                                            let aiMlScene, aiMlCamera, aiMlRenderer, aiMlPoints;
+                                            if (aiMlCanvas) {
+                                                aiMlScene = new THREE.Scene();
+                                                aiMlCamera = new THREE.PerspectiveCamera(75, aiMlCanvas.clientWidth / aiMlCanvas.clientHeight || 1, 0.1, 1000);
+                                                aiMlRenderer = new THREE.WebGLRenderer({ canvas: aiMlCanvas, alpha: true, antialias: true });
+                
+                                                const aiMlPointsGeometry = new THREE.BufferGeometry();
+                                                const aiMlVertices = [];
+                                                for (let i = 0; i < 1000; i++) {
+                                                    aiMlVertices.push(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+                                                }
+                                                aiMlPointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(aiMlVertices, 3));
+                                                const aiMlPointsMaterial = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.02, transparent: true, opacity: 0.8 });
+                                                aiMlPoints = new THREE.Points(aiMlPointsGeometry, aiMlPointsMaterial);
+                                                aiMlScene.add(aiMlPoints);
+                                                aiMlCamera.position.z = 2;
+                                            }
+
+                                            // Data Analysis Canvas
+                                            const dataAnalysisCanvas = document.getElementById('dataAnalysisCanvas');
+                                            let dataAnalysisScene, dataAnalysisCamera, dataAnalysisRenderer, dataAnalysisPoints;
+                                            if (dataAnalysisCanvas) {
+                                                dataAnalysisScene = new THREE.Scene();
+                                                dataAnalysisCamera = new THREE.PerspectiveCamera(75, dataAnalysisCanvas.clientWidth / dataAnalysisCanvas.clientHeight || 1, 0.1, 1000);
+                                                dataAnalysisRenderer = new THREE.WebGLRenderer({ canvas: dataAnalysisCanvas, alpha: true, antialias: true });
+                
+                                                const daPointsGeometry = new THREE.BufferGeometry();
+                                                const daVertices = [];
+                                                for (let i = 0; i < 1000; i++) {
+                                                    daVertices.push(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+                                                }
+                                                daPointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(daVertices, 3));
+                                                const daPointsMaterial = new THREE.PointsMaterial({ color: 0x8a2be2, size: 0.02, transparent: true, opacity: 0.8 });
+                                                dataAnalysisPoints = new THREE.Points(daPointsGeometry, daPointsMaterial);
+                                                dataAnalysisScene.add(dataAnalysisPoints);
+                                                dataAnalysisCamera.position.z = 2;
+                                            }
+
+                                            // Cloud Infra Canvas
+                                            const cloudInfraCanvas = document.getElementById('cloudInfraCanvas');
+                                            let cloudInfraScene, cloudInfraCamera, cloudInfraRenderer, cloudInfraPoints;
+                                            if (cloudInfraCanvas) {
+                                                cloudInfraScene = new THREE.Scene();
+                                                cloudInfraCamera = new THREE.PerspectiveCamera(75, cloudInfraCanvas.clientWidth / cloudInfraCanvas.clientHeight || 1, 0.1, 1000);
+                                                cloudInfraRenderer = new THREE.WebGLRenderer({ canvas: cloudInfraCanvas, alpha: true, antialias: true });
+
+                                                const ciPointsGeometry = new THREE.BufferGeometry();
+                                                const ciVertices = [];
+                                                for (let i = 0; i < 1000; i++) {
+                                                    ciVertices.push(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1);
+                                                }
+                                                ciPointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(ciVertices, 3));
+                                                const ciPointsMaterial = new THREE.PointsMaterial({ color: 0xff007a, size: 0.02, transparent: true, opacity: 0.8 });
+                                                cloudInfraPoints = new THREE.Points(ciPointsGeometry, ciPointsMaterial);
+                                                cloudInfraScene.add(cloudInfraPoints);
+                                                cloudInfraCamera.position.z = 2;
+                                            }
+            
+                                            // --- Initialize Animation Objects ---
+
+                                            // Grid Points Animation Object (project1Points)
+                                            const gridGeometry = new THREE.BufferGeometry();
+                                            const gridVertices = [];
+                                            const gridSize = 10;
+                                            for (let i = 0; i < gridSize; i++) {
+                                                for (let j = 0; j < gridSize; j++) {
+                                                    gridVertices.push((i - gridSize/2) * 0.1, (j - gridSize/2) * 0.1, 0);
+                                                }
+                                            }
+                                            gridGeometry.setAttribute('position', new THREE.Float32BufferAttribute(gridVertices, 3));
+                                            const gridMaterial = new THREE.PointsMaterial({ color: 0x00f0ff, size: 0.05, sizeAttenuation: true });
+                                            project1Points = new THREE.Points(gridGeometry, gridMaterial);
+                                            project1Points.scale.set(1.6, 1.6, 1.6); // Scale for AI Swarms visual
+                                            p1Positions = project1Points.geometry.attributes.position;
+
+                                            // Cityscape Animation Object (project2Group)
+
+                                            project2Group = new THREE.Group();
+                                            for (let i = 0; i < 20; i++) {
+                                                const height = Math.random() * 0.5 + 0.2;
+                                                const buildingGeometry = new THREE.BoxGeometry(0.1, height, 0.1);
+                                                const buildingMaterial = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true }); 
+                                                const building = new THREE.Mesh(buildingGeometry, buildingMaterial);
+                                                building.position.x = (Math.random() - 0.5) * 2;
+                                                building.position.z = (Math.random() - 0.5) * 2;
+                                                building.position.y = height / 2;
+                                                project2Group.add(building);
+                                            }
+                                            project2Group.scale.set(1.8, 1.8, 1.8); // Scale for Customer Service AI Chatbot visual
+
+                                            // Random Lines Animation Object (project3Group)
+                                            project3Group = new THREE.Group();
+                                            const linesMaterial = new THREE.LineBasicMaterial({ color: 0xff007a });
+                                            for (let i = 0; i < 20; i++) {
+                                                const lineGeom = new THREE.BufferGeometry();
+                                                const vertices = [
+                                                    Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1,
+                                                    Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1
+                                                ];
+                                                lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+                                                const line = new THREE.Line(lineGeom, linesMaterial);
+                                                project3Group.add(line);
+                                            }
+                                            project3Group.scale.set(1.6, 1.6, 1.6); // Scale for Advanced Prediction Models visual
+                                            // --- End Initialize Animation Objects ---
+
+                                            // Project 1 Canvas (Customer Service AI Chatbot - gets Cityscape animation)
+                                            const project1Canvas = document.getElementById('project1Canvas');
+                                            const project1Scene = new THREE.Scene();
+                                            const project1Camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const project1Renderer = new THREE.WebGLRenderer({ 
+                                                canvas: project1Canvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+                                            project1Scene.add(project2Group); // Cityscape
+                                            project1Camera.position.z = 1.5; // Camera closer for Customer Service AI Chatbot
+                                            project1Camera.position.y = 0.8; // Adjusted Y for better framing
+        
+            
+                                            // Project 2 Canvas (Advanced Prediction Models - gets Random Lines animation)
+                                            const project2Canvas = document.getElementById('project2Canvas');
+                                            const project2Scene = new THREE.Scene();
+                                            const project2Camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const project2Renderer = new THREE.WebGLRenderer({ 
+                                                canvas: project2Canvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+                                            project2Scene.add(project3Group); // Random Lines
+                                            project2Camera.position.z = 1.9; // Camera closer for Advanced Prediction Models
+            
+                                            // Project 3 Canvas (AI Swarms Concept - gets Grid Points animation)
+                                            const project3Canvas = document.getElementById('project3Canvas');
+                                            const project3Scene = new THREE.Scene();
+                                            const project3Camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const project3Renderer = new THREE.WebGLRenderer({ 
+                                                canvas: project3Canvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+                                            project3Scene.add(project1Points); // Grid Points
+                                            project3Camera.position.z = 1.2; // Camera closer for AI Swarms
+                                            project3Camera.position.y = 0; 
+        
+            
+                                            // Tech Viz Canvas
+                                            const techVizCanvas = document.getElementById('techVizCanvas');
+                                            const techVizScene = new THREE.Scene();
+                                            const techVizCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const techVizRenderer = new THREE.WebGLRenderer({ 
+                                                canvas: techVizCanvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+            
+                                            const techVizParticles = 500;
+                                            const techVizPositions = new Float32Array(techVizParticles * 3);
+                                            const techVizColors = new Float32Array(techVizParticles * 3);
+                                            for (let i = 0; i < techVizParticles; i++) {
+                                                techVizPositions[i * 3] = (Math.random() - 0.5) * 10;
+                                                techVizPositions[i * 3 + 1] = (Math.random() - 0.5) * 10;
+                                                techVizPositions[i * 3 + 2] = (Math.random() - 0.5) * 10;
+                                                techVizColors[i * 3] = Math.random() * 0.5 + 0.5;
+                                                techVizColors[i * 3 + 1] = Math.random() * 0.3;
+                                                techVizColors[i * 3 + 2] = Math.random() * 0.5 + 0.5;
+                                            }
+                                            const techVizGeometry = new THREE.BufferGeometry();
+                                            techVizGeometry.setAttribute('position', new THREE.BufferAttribute(techVizPositions, 3));
+                                            techVizGeometry.setAttribute('color', new THREE.BufferAttribute(techVizColors, 3));
+                                            const techVizMaterial = new THREE.PointsMaterial({ size: 0.1, vertexColors: true, transparent: true, opacity: 0.8, sizeAttenuation: true });
+                                            const techVizParticleSystem = new THREE.Points(techVizGeometry, techVizMaterial);
+                                            techVizScene.add(techVizParticleSystem);
+                                            techVizCamera.position.z = 5;
+            
+                                            // Stats Canvas
+                                            const statsCanvas = document.getElementById('statsCanvas');
+                                            const statsScene = new THREE.Scene();
+                                            const statsCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const statsRenderer = new THREE.WebGLRenderer({ 
+                                                canvas: statsCanvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+            
+                                            const statsGroup = new THREE.Group();
+                                            const barHeights = [1.5, 2, 2.8, 1.8, 2.5];
+                                            const barColors = [0x00f0ff, 0x5773ff, 0xff007a, 0x8a2be2, 0x00ffaa];
+                                            for (let i = 0; i < barHeights.length; i++) {
+                                                const barGeometry = new THREE.BoxGeometry(0.3, barHeights[i], 0.3);
+                                                const barMaterial = new THREE.MeshBasicMaterial({ color: barColors[i] });
+                                                const bar = new THREE.Mesh(barGeometry, barMaterial);
+                                                bar.position.x = (i - 2) * 0.8;
+                                                bar.position.y = barHeights[i] / 2;
+                                                statsGroup.add(bar);
+                                                if (i > 0) {
+                                                    const lineGeom = new THREE.BufferGeometry();
+                                                    const lineVerts = [(i-1 - 2) * 0.8, barHeights[i-1], 0, (i - 2) * 0.8, barHeights[i], 0];
+                                                    lineGeom.setAttribute('position', new THREE.Float32BufferAttribute(lineVerts, 3));
+                                                    const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
+                                                    const line = new THREE.Line(lineGeom, lineMat);
+                                                    statsGroup.add(line);
+                                                }
+                                            }
+                                            const planeGeometry = new THREE.PlaneGeometry(5, 0.1);
+                                            const planeMaterial = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide });
+                                            const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                                            plane.rotation.x = Math.PI / 2;
+                                            plane.position.y = -0.05;
+                                            statsGroup.add(plane);
+                                            statsScene.add(statsGroup);
+                                            statsCamera.position.z = 6;
+                                            statsCamera.position.y = 1;
+                                            statsCamera.lookAt(0, 1, 0);
+            
+                                            // Footer Sphere
+                                            const footerSphereCanvas = document.getElementById('footerSphereCanvas');
+                                            const footerSphereScene = new THREE.Scene();
+                                            const footerSphereCamera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                                            const footerSphereRenderer = new THREE.WebGLRenderer({ 
+                                                canvas: footerSphereCanvas, 
+                                                alpha: true,
+                                                antialias: true 
+                                            });
+            
+                                            const footerSphereGeometry = new THREE.SphereGeometry(1, 32, 32);
+                                            const footerSphereMaterial = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true, transparent: true, opacity: 0.4 });
+                                            const footerSphere = new THREE.Mesh(footerSphereGeometry, footerSphereMaterial);
+                                            footerSphereScene.add(footerSphere);
+                                            footerSphereCamera.position.z = 3;
+            
+                                            // Intersection Observer for animated elements
+                                            const observer = new IntersectionObserver((entries) => {
+                                                entries.forEach(entry => {
+                                                    if (entry.isIntersecting) {
+                                                        entry.target.classList.add('visible');
+                                                    }
+                                                });
+                                            }, { threshold: 0.1 });
+            
+                                            document.querySelectorAll('.feature-panel').forEach(panel => {
+                                                observer.observe(panel);
+                                            });
+            
+                                            // Animation loop
+                                            function animate() {
+                                                requestAnimationFrame(animate);
+                
+                                                torus.rotation.x += 0.01;
+                                                torus.rotation.y += 0.01;
+                                                torusRenderer.render(torusScene, torusCamera);
+                
+                                                cube.rotation.x += 0.005;
+                                                cube.rotation.y += 0.005;
+                                                cubeRenderer.render(cubeScene, cubeCamera);
+                
+                                                pyramid.rotation.x += 0.007;
+                                                pyramid.rotation.z += 0.007;
+                                                pyramidRenderer.render(pyramidScene, pyramidCamera);
+
+                                                if (aiMlPoints && aiMlRenderer) {
+                                                    aiMlPoints.rotation.y += 0.005;
+                                                    aiMlRenderer.render(aiMlScene, aiMlCamera);
+                                                }
+                                                if (dataAnalysisPoints && dataAnalysisRenderer) {
+                                                    dataAnalysisPoints.rotation.y += 0.005;
+                                                    dataAnalysisRenderer.render(dataAnalysisScene, dataAnalysisCamera);
+                                                }
+                                                if (cloudInfraPoints && cloudInfraRenderer) {
+                                                    cloudInfraPoints.rotation.y += 0.005;
+                                                    cloudInfraRenderer.render(cloudInfraScene, cloudInfraCamera);
+                                                }
+                
+                                                // Project 1 Canvas (Customer Service AI Chatbot - now Cityscape)
+                                                if (project2Group && project1Renderer) { // project2Group is the cityscape object
+                                                    project2Group.rotation.y += 0.005; // Cityscape's original rotation speed
+                                                    project1Renderer.render(project1Scene, project1Camera);
+                                                }
+                
+                                                // Project 2 Canvas (Advanced Prediction Models - now Random Lines)
+                                                if (project3Group && project2Renderer) { // project3Group is the random lines object
+                                                    project3Group.rotation.y += 0.008; // Random Lines' original rotation speed
+                                                    project2Renderer.render(project2Scene, project2Camera);
+                                                }
+                
+                                                // Project 3 Canvas (AI Swarms Concept - now Grid Points)
+                                                if (project1Points && project3Renderer) { // project1Points is the grid points object
+                                                    project1Points.rotation.y += 0.01; // Grid Points' original rotation speed
+                                                    if (p1Positions) { // p1Positions is tied to project1Points
+                                                        for (let i = 2; i < p1Positions.count * 3; i += 3) {
+                                                            p1Positions.array[i] = Math.sin(Date.now() * 0.001 + i) * 0.5;
+                                                        }
+                                                        p1Positions.needsUpdate = true;
+                                                    }
+                                                    project3Renderer.render(project3Scene, project3Camera);
+                                                }
+                
+                                                techVizParticleSystem.rotation.y += 0.003;
+                                                techVizRenderer.render(techVizScene, techVizCamera);
+                
+                                                statsGroup.rotation.y += 0.002;
+                                                statsRenderer.render(statsScene, statsCamera);
+                
+                                                footerSphere.rotation.y += 0.01;
+                                                footerSphereRenderer.render(footerSphereScene, footerSphereCamera);
+                                            }
+            
+                                            animate();
+            
+                                            // Handle window resize
+                                            window.addEventListener('resize', function() {
+                                                const canvases = [
+                                                    { canvas: torusCanvas, renderer: torusRenderer, camera: torusCamera },
+                                                    { canvas: cubeCanvas, renderer: cubeRenderer, camera: cubeCamera },
+                                                    { canvas: pyramidCanvas, renderer: pyramidRenderer, camera: pyramidCamera },
+                                                    { canvas: aiMlCanvas, renderer: aiMlRenderer, camera: aiMlCamera },
+                                                    { canvas: dataAnalysisCanvas, renderer: dataAnalysisRenderer, camera: dataAnalysisCamera },
+                                                    { canvas: cloudInfraCanvas, renderer: cloudInfraRenderer, camera: cloudInfraCamera },
+                                                    { canvas: project1Canvas, renderer: project1Renderer, camera: project1Camera },
+                                                    { canvas: project2Canvas, renderer: project2Renderer, camera: project2Camera },
+                                                    { canvas: project3Canvas, renderer: project3Renderer, camera: project3Camera },
+                                                    { canvas: techVizCanvas, renderer: techVizRenderer, camera: techVizCamera },
+                                                    { canvas: statsCanvas, renderer: statsRenderer, camera: statsCamera },
+                                                    { canvas: footerSphereCanvas, renderer: footerSphereRenderer, camera: footerSphereCamera }
+                                                ];
+                
+                                                canvases.forEach(item => {
+                                                    if (item.canvas && item.renderer && item.camera) { // Ensure all parts exist
+                                                        const parent = item.canvas.parentElement;
+                                                        if (parent) {
+                                                            const width = parent.offsetWidth;
+                                                            const height = parent.offsetHeight;
+                            
+                                                            if (width > 0 && height > 0) {
+                                                                item.canvas.width = width;
+                                                                item.canvas.height = height;
+                                                                item.renderer.setSize(width, height);
+                                                                item.camera.aspect = width / height;
+                                                                item.camera.updateProjectionMatrix();
+                                                            }
+                                                        }
+                                                    }
+                                                });
+                                            });
+            
+                                            window.dispatchEvent(new Event('resize'));
+                                        });
+        
+                                    </script>
 </body>
 </html>
