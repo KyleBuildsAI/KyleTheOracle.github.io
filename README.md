@@ -1,2 +1,2 @@
-# KyleTheOracle.github.io
-https://kyletheoracle.github.io/
+# KyleBuildsAI.github.io
+https://kylebuildsai.github.io/
